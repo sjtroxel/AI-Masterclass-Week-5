@@ -6,7 +6,7 @@ These rules apply across the entire codebase. They are non-negotiable.
 - API keys (Anthropic, Supabase service role) NEVER appear in client-side code.
 - All secrets are accessed via `server/lib/config.ts` which reads from environment variables.
 - The `.env` file is in `.gitignore`. The repo contains only `.env.example` with placeholder values.
-- In production, secrets are injected via the deployment platform (Railway/environment variables).
+- In production, secrets are injected via the deployment platform environment variables — Railway for the backend, Vercel for the frontend.
 
 ## Express Security Baseline
 Every Express app bootstrap (`server/index.ts`) must include in this order:

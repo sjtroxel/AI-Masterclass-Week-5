@@ -1,0 +1,27 @@
+# === Poster Pilot Secrets & Config ===
+.env
+.env.*
+*.pem
+*.key
+.aws/
+.ssh/
+server/lib/secrets.ts
+
+# === Project Specifics ===
+supabase/.branches/
+project-specs/ARCHIVE/ # If you ever move old specs here
+
+# === Node / Build Outputs ===
+node_modules/
+dist/
+build/
+.cache/
+.eslintcache
+.stylelintcache
+
+# === OS Specific ===
+.DS_Store
+Thumbs.db
+
+# === Test Coverage ===
+coverage/

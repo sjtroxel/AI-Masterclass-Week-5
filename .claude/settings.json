@@ -1,14 +1,5 @@
 {
   "permissions": {
-    "deny": [
-      ".env",
-      ".env.*",
-      "*.pem",
-      "*.key",
-      ".aws/",
-      ".ssh/",
-      "supabase/.branches/",
-      "server/lib/secrets.ts"
-    ]
+    "deny": []
   }
 }

@@ -14,6 +14,7 @@ posters, 19th-century patent medicine ads, and more. It is a Discovery Engine fo
 - **Testing**: Vitest (unit), Playwright (E2E)
 - **Build**: Vite (frontend), tsx/esbuild (backend)
 - **Package Manager**: npm workspaces (monorepo: `/client`, `/server`, `/shared`)
+- **Deployment**: Railway (Express backend) + Vercel (Vite frontend SPA)
 
 ## Architecture
 ```
@@ -93,6 +94,8 @@ router.get('/posters/:id', async (req: Request, res: Response, next: NextFunctio
 - Run `npm test` before every commit (enforced via pre-commit hook)
 
 ## Git Conventions
+- **All commits are made manually by the human developer — Claude never runs `git commit`
+  or any git write command, and must never be listed as a co-author in any commit message.**
 - Branch naming: `feature/short-description`, `fix/issue-description`, `chore/task-name`
 - Commit format: `type(scope): description` — e.g., `feat(search): add CLIP vector similarity`
 - Types: `feat`, `fix`, `chore`, `docs`, `test`, `refactor`
