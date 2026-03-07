@@ -1,0 +1,14 @@
+{
+  "name": "@poster-pilot/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc --project tsconfig.json",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@poster-pilot/shared": "*"
+  }
+}
