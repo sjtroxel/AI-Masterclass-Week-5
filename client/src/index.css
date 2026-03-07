@@ -1,0 +1,7 @@
+@import "tailwindcss";
+
+@theme {
+  /* Design tokens — populated in Phase 6 (Frontend Shell) */
+  --color-primary: #1a1a2e;
+  --color-surface: #ffffff;
+}
