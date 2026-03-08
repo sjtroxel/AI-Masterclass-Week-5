@@ -2,6 +2,14 @@ import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { analyzeQuery, expandVibeQuery } from '../queryAnalyzer.js';
 import { AIServiceError } from '../../middleware/errorHandler.js';
 
+// ─── Mock config — prevents process.exit(1) in CI where no .env is present ───
+// queryAnalyzer.ts imports config at the module level; without this mock the
+// real config.ts runs its Zod validation, finds no env vars, and calls process.exit.
+
+vi.mock('../../lib/config.js', () => ({
+  config: { anthropicApiKey: 'test-api-key' },
+}));
+
 // ─── Mock Anthropic SDK ───────────────────────────────────────────────────────
 
 vi.mock('@anthropic-ai/sdk', () => {
