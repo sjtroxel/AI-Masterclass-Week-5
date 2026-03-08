@@ -1,0 +1,175 @@
+{
+  "body": {
+    "hits": {
+      "total": { "value": 5 },
+      "hits": [
+        {
+          "_id": "534144",
+          "_source": {
+            "naId": 534144,
+            "title": "Work [Poster showing worker at industrial machinery]",
+            "scopeAndContentNote": "Color screenprint poster encouraging industrial labor as part of the Works Progress Administration Federal Art Project. Shows a male worker operating heavy machinery with bold geometric composition typical of WPA poster design.",
+            "coverageDate": "1936-1942",
+            "creators": [
+              { "displayName": "Federal Art Project, Work Projects Administration" }
+            ],
+            "objects": [
+              {
+                "file": {
+                  "url": "https://upload.wikimedia.org/wikipedia/commons/3/3f/Bikesgray.jpg"
+                },
+                "thumbnail": {
+                  "url": "https://upload.wikimedia.org/wikipedia/commons/3/3f/Bikesgray.jpg"
+                }
+              }
+            ],
+            "parentSeries": {
+              "naId": 558544,
+              "title": "Work Projects Administration Poster Collection"
+            },
+            "subjectHeadings": [
+              { "termName": "Posters" },
+              { "termName": "Work Projects Administration (U.S.)" },
+              { "termName": "Art, American -- 20th century" },
+              { "termName": "Industrial workers" }
+            ],
+            "physicalDescription": "Color screenprint ; 55 x 35 cm",
+            "reproductionNumber": "WPA-1936-001"
+          }
+        },
+        {
+          "_id": "534145",
+          "_source": {
+            "naId": 534145,
+            "title": "Go to a National Park [Travel poster with landscape scene]",
+            "scopeAndContentNote": "WPA travel poster promoting national parks as recreation destinations for American workers. Features stylized landscape with mountains, trees, and sky in vibrant flat color blocks. Part of the National Park Service series produced by the Federal Art Project.",
+            "coverageDate": "ca. 1938",
+            "creators": [
+              { "displayName": "Siporin, Mitchell, 1910-1976" }
+            ],
+            "objects": [
+              {
+                "file": {
+                  "url": "https://upload.wikimedia.org/wikipedia/commons/a/a7/Camponotus_flavomarginatus_ant.jpg"
+                },
+                "thumbnail": {
+                  "url": "https://upload.wikimedia.org/wikipedia/commons/a/a7/Camponotus_flavomarginatus_ant.jpg"
+                }
+              }
+            ],
+            "parentSeries": {
+              "naId": 558544,
+              "title": "Work Projects Administration Poster Collection"
+            },
+            "subjectHeadings": [
+              { "termName": "Posters" },
+              { "termName": "National parks and reserves -- United States" },
+              { "termName": "Federal Art Project (U.S.)" },
+              { "termName": "Tourism -- United States" }
+            ],
+            "physicalDescription": "Color silkscreen ; 56 x 36 cm",
+            "reproductionNumber": "WPA-1938-047"
+          }
+        },
+        {
+          "_id": "534146",
+          "_source": {
+            "naId": 534146,
+            "title": "Safety [Public health and workplace safety poster]",
+            "scopeAndContentNote": "Bold graphic poster promoting workplace safety under the WPA Federal Art Project. Red and black design with stylized figure and warning imagery. Part of a series produced for the U.S. Department of Labor promoting industrial safety standards.",
+            "coverageDate": "1937",
+            "creators": [
+              { "displayName": "Auerbach-Levy, William, 1889-1964" }
+            ],
+            "objects": [
+              {
+                "file": {
+                  "url": "https://upload.wikimedia.org/wikipedia/commons/1/1e/Stonehenge.jpg"
+                },
+                "thumbnail": {
+                  "url": "https://upload.wikimedia.org/wikipedia/commons/1/1e/Stonehenge.jpg"
+                }
+              }
+            ],
+            "parentSeries": {
+              "naId": 558544,
+              "title": "Work Projects Administration Poster Collection"
+            },
+            "subjectHeadings": [
+              { "termName": "Posters" },
+              { "termName": "Industrial safety" },
+              { "termName": "Work Projects Administration (U.S.)" },
+              { "termName": "Public health -- United States" }
+            ],
+            "physicalDescription": "Color screenprint ; 51 x 36 cm",
+            "reproductionNumber": "WPA-1937-023"
+          }
+        },
+        {
+          "_id": "534147",
+          "_source": {
+            "naId": 534147,
+            "title": "Go to the Federal Theater [Theater arts promotional poster]",
+            "scopeAndContentNote": "Promotional poster for Federal Theater Project productions sponsored by the Works Progress Administration. Art Deco composition features theatrical masks and stage curtain motifs with vivid color palette. Encourages public attendance at WPA-sponsored theater performances.",
+            "coverageDate": "1936-1939",
+            "creators": null,
+            "objects": [
+              {
+                "file": {
+                  "url": "https://upload.wikimedia.org/wikipedia/commons/3/3a/Cat03.jpg"
+                },
+                "thumbnail": {
+                  "url": "https://upload.wikimedia.org/wikipedia/commons/3/3a/Cat03.jpg"
+                }
+              }
+            ],
+            "parentSeries": {
+              "naId": 558544,
+              "title": "Work Projects Administration Poster Collection"
+            },
+            "subjectHeadings": [
+              { "termName": "Posters" },
+              { "termName": "Federal Theatre Project (U.S.)" },
+              { "termName": "Theater -- United States -- 20th century" }
+            ],
+            "physicalDescription": "Color silkscreen ; 58 x 40 cm"
+          }
+        },
+        {
+          "_id": "534148",
+          "_source": {
+            "naId": 534148,
+            "title": "Eat Right to Work and Win [Nutrition and wartime food poster]",
+            "scopeAndContentNote": "Wartime nutrition poster produced by the WPA Federal Art Project in cooperation with the U.S. Department of Agriculture. Depicts colorful array of fruits, vegetables, and grains arranged in a dynamic composition. Part of the wartime civilian morale series encouraging proper nutrition to support the war effort.",
+            "coverageDate": "1941-1943",
+            "creators": [
+              { "displayName": "Federal Art Project, Work Projects Administration" }
+            ],
+            "objects": [
+              {
+                "file": {
+                  "url": "https://upload.wikimedia.org/wikipedia/commons/6/6d/Good_Food_Display_-_NCI_Visuals_Online.jpg"
+                },
+                "thumbnail": {
+                  "url": "https://upload.wikimedia.org/wikipedia/commons/6/6d/Good_Food_Display_-_NCI_Visuals_Online.jpg"
+                }
+              }
+            ],
+            "parentSeries": {
+              "naId": 558544,
+              "title": "Work Projects Administration Poster Collection"
+            },
+            "subjectHeadings": [
+              { "termName": "Posters" },
+              { "termName": "Nutrition -- United States" },
+              { "termName": "World War, 1939-1945 -- Civilian morale" },
+              { "termName": "Work Projects Administration (U.S.)" }
+            ],
+            "physicalDescription": "Color screenprint ; 54 x 36 cm",
+            "reproductionNumber": "WPA-1942-115"
+          }
+        }
+      ]
+    }
+  }
+}

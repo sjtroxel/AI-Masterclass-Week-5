@@ -1,11 +1,13 @@
 import { z } from 'zod';
 import dotenv from 'dotenv';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
-// --- ADDED THIS SECTION ---
-// This tells the server: "Go up one level from the server folder to find .env"
-dotenv.config({ path: path.resolve(process.cwd(), '../.env') });
-// ---------------------------
+// Resolve .env relative to this file's location (server/src/lib/config.ts),
+// not process.cwd() — which varies depending on how npm scripts are invoked.
+// Three levels up: lib/ → src/ → server/ → monorepo root
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
 const envSchema = z
   .object({

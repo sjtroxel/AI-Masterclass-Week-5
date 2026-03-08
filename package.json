@@ -17,6 +17,7 @@
     "test:e2e": "playwright test",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit --project client/tsconfig.json && tsc --noEmit --project server/tsconfig.json && tsc --noEmit --project shared/tsconfig.json",
+    "ingest": "tsx server/src/workers/ingestWorker.ts",
     "prepare": "husky"
   },
   "lint-staged": {

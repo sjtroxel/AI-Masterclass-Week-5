@@ -31,6 +31,12 @@ export class AIServiceError extends AppError {
   }
 }
 
+export class DatabaseError extends AppError {
+  constructor(message = 'Database operation failed') {
+    super(500, 'DATABASE_ERROR', message);
+  }
+}
+
 // ─── Global Error Handler ─────────────────────────────────────────────────────
 // Must be registered as the LAST middleware in index.ts (4-arg signature is required).
 
@@ -38,7 +44,7 @@ export function errorHandler(
   err: unknown,
   req: Request,
   res: Response,
-  _next: NextFunction, // eslint-disable-line @typescript-eslint/no-unused-vars
+  _next: NextFunction,
 ): void {
   const isProduction = process.env['NODE_ENV'] === 'production';
 

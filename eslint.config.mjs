@@ -18,6 +18,17 @@ export default tseslint.config(
     // Project-wide rules
     rules: {
       'no-console': 'warn',
+      // Allow intentionally-unused variables when prefixed with _
+      // Convention: `_name` or bare `_` signals "ignored by design"
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+          destructuredArrayIgnorePattern: '^_',
+        },
+      ],
     },
   },
 );

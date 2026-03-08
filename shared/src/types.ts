@@ -45,6 +45,33 @@ export type Poster = {
   ingest_version: number;
 };
 
+/**
+ * Data required to ingest (insert or update) a poster.
+ * Includes the embedding vector — unlike Poster, which never exposes it.
+ * Auto-generated fields (id, ingested_at, last_updated_at) are omitted.
+ */
+export type IngestPosterData = {
+  nara_id: string;
+  title: string;
+  date_created: string | null;
+  date_normalized: string | null;
+  creator: string | null;
+  description: string | null;
+  subject_tags: string[];
+  series_title: string | null;
+  series_id: string | null;
+  physical_description: string | null;
+  reproduction_number: string | null;
+  rights_statement: string | null;
+  image_url: string;
+  thumbnail_url: string;
+  embedding: number[];
+  embedding_confidence: number;
+  metadata_completeness: number;
+  overall_confidence: number;
+  ingest_version: number;
+};
+
 /** Lightweight poster — used for grid/list views where full metadata is not needed. */
 export type PosterSummary = {
   id: string;

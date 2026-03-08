@@ -6,7 +6,7 @@ import {
   ValidationError,
   AIServiceError,
   errorHandler,
-} from '../middleware/errorHandler.js';
+} from '../errorHandler.js';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

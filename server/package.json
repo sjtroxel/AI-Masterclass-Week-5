@@ -17,6 +17,7 @@
     "express": "^5.0.0",
     "express-rate-limit": "^8.3.0",
     "helmet": "^8.1.0",
+    "replicate": "^1.4.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
