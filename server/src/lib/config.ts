@@ -1,16 +1,35 @@
 import { z } from 'zod';
+import dotenv from 'dotenv';
+import path from 'path';
 
-const envSchema = z.object({
-  ANTHROPIC_API_KEY: z.string().min(1),
-  SUPABASE_URL: z.string().url(),
-  SUPABASE_ANON_KEY: z.string().min(1),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
-  NARA_API_KEY: z.string().min(1),
-  REPLICATE_API_KEY: z.string().min(1),
-  CLIP_MODEL_VERSION: z.string().min(1),
-  PORT: z.coerce.number().int().positive().default(3001),
-  CLIENT_ORIGIN: z.string().url(),
-});
+// --- ADDED THIS SECTION ---
+// This tells the server: "Go up one level from the server folder to find .env"
+dotenv.config({ path: path.resolve(process.cwd(), '../.env') });
+// ---------------------------
+
+const envSchema = z
+  .object({
+    ANTHROPIC_API_KEY: z.string().min(1),
+    SUPABASE_URL: z.string().url(), // Changed to .string().url() for better compatibility
+    SUPABASE_ANON_KEY: z.string().min(1),
+    SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+    NARA_API_KEY: z.string().min(1),
+    REPLICATE_API_KEY: z.string().min(1),
+    CLIP_MODEL_VERSION: z.string().min(1),
+    PORT: z.coerce.number().int().positive().default(3001),
+    CLIENT_ORIGIN: z.string().url(),
+  })
+  .transform((env) => ({
+    anthropicApiKey: env.ANTHROPIC_API_KEY,
+    supabaseUrl: env.SUPABASE_URL,
+    supabaseAnonKey: env.SUPABASE_ANON_KEY,
+    supabaseServiceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
+    naraApiKey: env.NARA_API_KEY,
+    replicateApiKey: env.REPLICATE_API_KEY,
+    clipModelVersion: env.CLIP_MODEL_VERSION,
+    port: env.PORT,
+    clientOrigin: env.CLIENT_ORIGIN,
+  }));
 
 const result = envSchema.safeParse(process.env);
 

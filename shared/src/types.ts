@@ -138,6 +138,8 @@ export type ArchivistResponse = {
 
 export type HealthResponse = {
   status: 'ok';
+  db: 'connected';
+  timestamp: string;
 };
 
 export type ApiError = {
