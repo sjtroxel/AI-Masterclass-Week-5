@@ -240,5 +240,6 @@ Conversation to summarize:
   requires cross-series centroid comparison.
 - **Temporal similarity**: Cluster posters by `date_normalized` to enable
   "other posters from this era" recommendations.
-- **NARA API live sync**: Replace batch ingest with webhook-driven incremental updates
+- **DPLA / NARA live sync**: Replace batch ingest with incremental updates triggered
+  by DPLA's feed or, if the NARA Catalog API is restored, direct webhook-driven sync
   when NARA adds new digitized items.

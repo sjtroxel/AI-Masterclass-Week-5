@@ -8,7 +8,7 @@
 
 ## Definition of Done
 
-- Running `npm run ingest` successfully fetches at least one NARA series and inserts
+- Running `npm run ingest` successfully fetches at least one series from DPLA and inserts
   rows into the `posters` table
 - Embeddings are 768-dimension float4 arrays, verified in Supabase dashboard
 - `overall_confidence`, `metadata_completeness`, and `embedding_confidence` are populated
@@ -66,7 +66,12 @@ Integration tests (mocked Replicate) — `server/__tests__/clipService.test.ts`:
 
 ### 3.4 — `server/workers/ingestWorker.ts`
 Step-by-step per poster record:
-1. Fetch NARA catalog from `catalog.archives.gov/api/v2/` (target series)
+1. Fetch from DPLA API (`api.dp.la/v2/items`) using a series-specific query
+   (e.g., "WPA poster" for `wpa-posters`). Override with `--dpla-query` CLI flag.
+   DPLA aggregates NARA holdings alongside LOC, Smithsonian, and other institutions.
+   > **Data source note**: The original target was `catalog.archives.gov/api/v2/` (NARA
+   > Catalog API v2), which is currently unreachable. DPLA was adopted as the primary
+   > source in Phase 3.5 because it provides equivalent or broader NARA poster coverage.
 2. Download image → generate CLIP image embedding via `clipService`
 3. Compute `metadata_completeness`: `filled_required_fields / 6`
    (required: `title`, `date_created`, `creator`, `description`, `nara_id`, `series_title`)
@@ -82,15 +87,21 @@ Add to root `package.json`:
 "ingest": "tsx server/workers/ingestWorker.ts"
 ```
 
-### 3.5 — Thumbnail generation
-- At ingest time, generate a 400px thumbnail URL from the full NARA image URL
-- Prefer NARA CDN resize parameters if supported; fall back to Supabase Storage
-- Store result in `thumbnail_url` column — this is what all UI components use
+### 3.5 — Thumbnail logic (DPLA)
+- DPLA provides an `object` field containing a thumbnail/preview image URL directly.
+- `image_url` = `hasView[0]["@id"]` (full resolution) if present, else `object`.
+- `thumbnail_url` = `object` field if present, else falls back to `image_url`.
+- Both are stored at ingest time — no server-side resize step needed.
+- Store result in `thumbnail_url` column — this is what all UI components use.
 
 ### 3.6 — Run initial ingest (WPA Posters series only)
 - Target: WPA Posters series only — start small, verify data quality before full ingest
+- Command: `npm run ingest -- --series=wpa-posters --limit=10 --random-embeddings`
+  (use `--random-embeddings` while Replicate billing credit is unavailable)
 - Confirm rows appear in Supabase dashboard with all fields populated
 - Spot-check 3–5 rows manually: embedding length = 768, confidence scores in [0.0, 1.0]
+- Note: `nara_id` values will be original NARA NAIDs for items DPLA sourced from NARA,
+  or `dpla-{hash}` for items from other contributing institutions
 
 ---
 

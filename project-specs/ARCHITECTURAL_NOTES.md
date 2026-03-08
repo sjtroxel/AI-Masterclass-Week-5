@@ -3,17 +3,28 @@
 ## System Overview
 
 Poster Pilot is a multimodal Discovery Engine. The primary data flow moves from
-the National Archives (NARA) API through CLIP embedding generation, into Supabase
-with pgvector, exposed via a typed Express API, and rendered in a React 19 SPA.
+DPLA (Digital Public Library of America) through CLIP embedding generation, into
+Supabase with pgvector, exposed via a typed Express API, and rendered in a React 19 SPA.
+
+DPLA aggregates NARA's digital poster holdings alongside the Library of Congress,
+Smithsonian, and other institutions, providing equal or broader coverage of the
+same poster corpus that was originally targeted via the NARA Catalog API.
+
+> **Note on data source migration**: The ingest pipeline originally targeted the
+> NARA Catalog API v2 (`catalog.archives.gov/api/v2/`), but that API is currently
+> unreachable — CloudFront returns SPA HTML for all `/api/v2/` paths. The pipeline
+> was migrated to DPLA in Phase 3.5. The `nara_id` column retains its name but now
+> stores either the original NARA NAID (extracted from DPLA metadata when available)
+> or a `dpla-{id}` prefixed identifier for items without a traceable NARA record.
 
 ---
 
 ## Data Flow: Ingestion Pipeline
 
 ```
-NARA Catalog API
+DPLA API (api.dp.la/v2/items)
       │
-      │  (1) Fetch poster metadata + image URLs
+      │  (1) Fetch poster metadata + image URLs (aggregated from NARA and other institutions)
       ▼
 Ingest Worker (server/workers/ingestWorker.ts)
       │
@@ -23,22 +34,23 @@ Ingest Worker (server/workers/ingestWorker.ts)
       ▼
 Supabase / PostgreSQL + pgvector
       │  → posters table (metadata + embedding)
-      │  → poster_images table (URL references, thumbnails)
       └──────────────────────────────────────────────
 ```
 
 ### Ingest Worker Details
-- **Step 1 — Fetch**: The NARA Catalog API (`catalog.archives.gov/api/v2/`) is polled.
-  We target the following series: WPA Posters, NASA History, Patent Medicine Ads, WWII
-  Propaganda. Rate limiting: max 5 concurrent requests, 1-second delay between batches.
+- **Step 1 — Fetch**: The DPLA API (`api.dp.la/v2/items`) is queried by series slug.
+  Default queries: `wpa-posters` → "WPA poster", `nasa-history` → "NASA poster",
+  `patent-medicine` → "patent medicine advertisement", `wwii-propaganda` → "World War II
+  propaganda poster". Override with `--dpla-query="..."` CLI flag. Rate limiting: max 5
+  concurrent requests, 1-second delay between batches.
 - **Step 2 — Embed**: Images are fetched and passed to the CLIP model endpoint.
-  Text descriptions (NARA's `description`, `title`, and `subject` fields) are also
+  Text descriptions (`description`, `title`, and `subject` fields) are also
   embedded separately. The final stored embedding is the IMAGE embedding.
   Text embeddings are used for hybrid search but not stored permanently.
 - **Step 3 — Metadata completeness**: Score = `filled_required_fields / total_required_fields`.
   Required fields: `title`, `date_created`, `creator`, `description`, `nara_id`, `series`.
 - **Step 4 — Confidence**: `(clip_similarity_to_centroid * 0.7) + (metadata_completeness * 0.3)`.
-  The centroid per series is precomputed and stored in the `series_centroids` table.
+  The centroid per series is precomputed and stored in the `series` table.
 - **Deduplication**: Posters are keyed on `nara_id`. Re-ingestion updates metadata but
   does NOT regenerate the embedding unless the image URL has changed.
 
@@ -134,7 +146,7 @@ React Client (streams into ArchivistMessage component)
 
 | Service | Purpose | Auth Method |
 |---------|---------|-------------|
-| NARA Catalog API v2 | Source of poster metadata + image URLs | API key (server-only) |
+| DPLA API (`api.dp.la/v2/items`) | Source of poster metadata + image URLs | API key (server-only) |
 | CLIP model (Replicate or self-hosted) | Generating 768-dim multimodal embeddings | API key (server-only) |
 | Supabase | PostgreSQL + pgvector + Auth + Storage | Service role key (server), anon key (client auth) |
 | Anthropic API | The Archivist LLM responses | API key (server-only) |

@@ -85,7 +85,7 @@ built in parallel once Phase 4 is complete — they have no dependency on each o
 **Depends on**: Phase 2
 
 **Definition of Done**:
-- `npm run ingest` fetches a NARA series and inserts rows with 768-dim embeddings
+- `npm run ingest` fetches a series from DPLA and inserts rows with 768-dim embeddings
 - `overall_confidence`, `metadata_completeness`, `embedding_confidence` populated on every row
 - Re-ingest deduplicates by `nara_id` — no embedding regenerated for unchanged records
 - CLIP preprocessing is idempotent; 77-token truncation logs a warning

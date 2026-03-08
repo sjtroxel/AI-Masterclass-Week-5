@@ -6,25 +6,27 @@ All tables live in the `public` schema in Supabase (PostgreSQL 15 + pgvector ext
 
 ## Table: `posters`
 
-The primary catalog table. One row per NARA poster record.
+The primary catalog table. One row per ingested poster record.
 
 ```sql
 CREATE TABLE posters (
   id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  nara_id               TEXT UNIQUE NOT NULL,        -- NARA catalog record identifier
+  -- External record identifier. Stores the original NARA NAID when available
+  -- (extracted from DPLA metadata), otherwise "dpla-{id}" for non-NARA sources.
+  nara_id               TEXT UNIQUE NOT NULL,
   title                 TEXT NOT NULL,
-  date_created          TEXT,                        -- NARA uses free-form dates ("ca. 1941-1943")
+  date_created          TEXT,                        -- free-form dates ("ca. 1941-1943")
   date_normalized       DATE,                        -- best-effort parsed date for filtering
   creator               TEXT,                        -- artist, agency, or "Unknown"
-  description           TEXT,                        -- NARA's catalog description
-  subject_tags          TEXT[],                      -- NARA subject headings (array)
+  description           TEXT,                        -- catalog description
+  subject_tags          TEXT[],                      -- subject headings (array)
   series_title          TEXT,                        -- e.g., "WPA Posters", "NASA History"
   series_id             UUID REFERENCES series(id),
   physical_description  TEXT,                        -- medium, dimensions
   reproduction_number   TEXT,                        -- NARA's internal reference
   rights_statement      TEXT,                        -- copyright / access status
-  image_url             TEXT NOT NULL,               -- full-resolution image URL (NARA CDN)
-  thumbnail_url         TEXT NOT NULL,               -- 400px thumbnail (generated at ingest)
+  image_url             TEXT NOT NULL,               -- full-resolution image URL (DPLA hasView or object)
+  thumbnail_url         TEXT NOT NULL,               -- thumbnail (DPLA object field, or image_url fallback)
 
   -- AI-generated fields
   embedding             vector(768),                 -- CLIP image embedding (clip-vit-large-patch14)
@@ -58,13 +60,14 @@ CREATE INDEX ON posters (overall_confidence);
   of its series; low score = outlier or poor image quality.
 - `metadata_completeness`: `filled_fields / 6` where required fields are:
   `title`, `date_created`, `creator`, `description`, `nara_id`, `series_title`.
+  (`nara_id` is always populated — either a real NARA NAID or a `dpla-{id}` fallback.)
 - `overall_confidence`: `(embedding_confidence * 0.7) + (metadata_completeness * 0.3)`
 
 ---
 
 ## Table: `series`
 
-Defines the major thematic groupings of the NARA corpus.
+Defines the major thematic groupings of the poster corpus.
 
 ```sql
 CREATE TABLE series (
@@ -72,7 +75,7 @@ CREATE TABLE series (
   slug            TEXT UNIQUE NOT NULL,          -- e.g., 'wpa-posters', 'nasa-history'
   title           TEXT NOT NULL,                 -- e.g., 'WPA Posters'
   description     TEXT,
-  nara_series_ref TEXT,                          -- NARA's series identifier
+  nara_series_ref TEXT,                          -- original NARA series identifier (legacy; DPLA is now the ingest source)
   centroid        vector(768),                   -- mean embedding of all posters in series
   poster_count    INT NOT NULL DEFAULT 0,        -- updated by trigger
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()

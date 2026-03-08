@@ -1,0 +1,181 @@
+{
+  "count": 5,
+  "start": 0,
+  "limit": 5,
+  "docs": [
+    {
+      "id": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4",
+      "@id": "http://dp.la/api/items/a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4",
+      "isShownAt": "https://catalog.archives.gov/id/534144",
+      "dataProvider": "National Archives and Records Administration",
+      "provider": {
+        "@id": "http://dp.la/api/contributor/nara",
+        "name": "National Archives and Records Administration"
+      },
+      "object": "https://upload.wikimedia.org/wikipedia/commons/3/3f/Bikesgray.jpg",
+      "hasView": [
+        {
+          "@id": "https://upload.wikimedia.org/wikipedia/commons/3/3f/Bikesgray.jpg",
+          "format": "image/jpeg"
+        }
+      ],
+      "sourceResource": {
+        "title": "Work [Poster showing worker at industrial machinery]",
+        "description": "Color screenprint poster encouraging industrial labor as part of the Works Progress Administration Federal Art Project. Shows a male worker operating heavy machinery with bold geometric composition typical of WPA poster design.",
+        "creator": "Federal Art Project, Work Projects Administration",
+        "date": {
+          "begin": "1936",
+          "end": "1942",
+          "displayDate": "1936-1942"
+        },
+        "subject": [
+          { "name": "Labor" },
+          { "name": "Works Progress Administration" },
+          { "name": "WPA Posters" }
+        ],
+        "format": "Silkscreen print",
+        "rights": "No copyright restrictions known. In the public domain.",
+        "identifier": ["NAID-534144"]
+      }
+    },
+    {
+      "id": "b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5",
+      "@id": "http://dp.la/api/items/b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5",
+      "isShownAt": "https://catalog.archives.gov/id/534145",
+      "dataProvider": "National Archives and Records Administration",
+      "provider": {
+        "@id": "http://dp.la/api/contributor/nara",
+        "name": "National Archives and Records Administration"
+      },
+      "object": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/PNG_transparency_demonstration_1.png/240px-PNG_transparency_demonstration_1.png",
+      "hasView": [
+        {
+          "@id": "https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png",
+          "format": "image/png"
+        }
+      ],
+      "sourceResource": {
+        "title": "Stay on the Job [Wartime production poster]",
+        "description": "Bold graphic wartime poster urging workers to maintain production output for the war effort. Features typography-heavy design with red, white, and blue color scheme consistent with WPA aesthetic.",
+        "creator": "Work Projects Administration",
+        "date": {
+          "begin": "1942",
+          "end": "1945",
+          "displayDate": "ca. 1942-1945"
+        },
+        "subject": [
+          { "name": "World War II" },
+          { "name": "War production" },
+          { "name": "WPA Posters" }
+        ],
+        "format": "Silkscreen print",
+        "rights": "No copyright restrictions known. In the public domain.",
+        "identifier": ["NAID-534145"]
+      }
+    },
+    {
+      "id": "c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6",
+      "@id": "http://dp.la/api/items/c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6",
+      "isShownAt": "https://catalog.archives.gov/id/534146",
+      "dataProvider": "National Archives and Records Administration",
+      "provider": {
+        "@id": "http://dp.la/api/contributor/nara",
+        "name": "National Archives and Records Administration"
+      },
+      "object": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Big_Buck_Bunny_thumbnail_vlc.png/240px-Big_Buck_Bunny_thumbnail_vlc.png",
+      "hasView": [
+        {
+          "@id": "https://upload.wikimedia.org/wikipedia/commons/9/9a/Big_Buck_Bunny_thumbnail_vlc.png",
+          "format": "image/png"
+        }
+      ],
+      "sourceResource": {
+        "title": "Visit a National Park [Poster for the National Park Service]",
+        "description": "Travel promotion poster produced by the Federal Art Project encouraging tourism to national parks. Features stylized landscape illustration with dramatic mountain scenery.",
+        "creator": "Federal Art Project",
+        "date": {
+          "begin": "1938",
+          "end": "1941",
+          "displayDate": "1938-1941"
+        },
+        "subject": [
+          { "name": "National parks and reserves" },
+          { "name": "Travel" },
+          { "name": "WPA Posters" }
+        ],
+        "format": "Silkscreen print",
+        "rights": "No copyright restrictions known. In the public domain.",
+        "identifier": ["NAID-534146"]
+      }
+    },
+    {
+      "id": "d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1",
+      "@id": "http://dp.la/api/items/d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1",
+      "isShownAt": "https://catalog.archives.gov/id/534147",
+      "dataProvider": "National Archives and Records Administration",
+      "provider": {
+        "@id": "http://dp.la/api/contributor/nara",
+        "name": "National Archives and Records Administration"
+      },
+      "object": "https://upload.wikimedia.org/wikipedia/commons/3/3f/Bikesgray.jpg",
+      "hasView": [
+        {
+          "@id": "https://upload.wikimedia.org/wikipedia/commons/3/3f/Bikesgray.jpg",
+          "format": "image/jpeg"
+        }
+      ],
+      "sourceResource": {
+        "title": "Books are Weapons in the War of Ideas",
+        "description": "Literacy and library promotion poster from the Federal Art Project depicting an open book as a weapon against fascism and ignorance. Text-forward design with high-contrast black and white imagery.",
+        "creator": ["Federal Art Project", "Office of War Information"],
+        "date": {
+          "begin": "1942",
+          "end": "1943",
+          "displayDate": "1942-1943"
+        },
+        "subject": [
+          { "name": "Books and reading" },
+          { "name": "Libraries" },
+          { "name": "World War II" },
+          { "name": "WPA Posters" }
+        ],
+        "format": "Lithograph",
+        "rights": "No copyright restrictions known. In the public domain.",
+        "identifier": ["NAID-534147"]
+      }
+    },
+    {
+      "id": "e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+      "@id": "http://dp.la/api/items/e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+      "isShownAt": "https://catalog.archives.gov/id/534148",
+      "dataProvider": "National Archives and Records Administration",
+      "provider": {
+        "@id": "http://dp.la/api/contributor/nara",
+        "name": "National Archives and Records Administration"
+      },
+      "object": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/PNG_transparency_demonstration_1.png/240px-PNG_transparency_demonstration_1.png",
+      "hasView": [
+        {
+          "@id": "https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png",
+          "format": "image/png"
+        }
+      ],
+      "sourceResource": {
+        "title": "America's Health — Federal Security Agency",
+        "description": "Public health awareness poster produced for the Federal Security Agency by the Work Projects Administration. Promotes preventive medicine and access to healthcare for all Americans.",
+        "creator": "Work Projects Administration",
+        "date": {
+          "displayDate": "ca. 1940"
+        },
+        "subject": [
+          { "name": "Public health" },
+          { "name": "Medicine" },
+          { "name": "WPA Posters" }
+        ],
+        "format": "Silkscreen print",
+        "rights": "No copyright restrictions known. In the public domain.",
+        "identifier": ["NAID-534148"]
+      }
+    }
+  ]
+}

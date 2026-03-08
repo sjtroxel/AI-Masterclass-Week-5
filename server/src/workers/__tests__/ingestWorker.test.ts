@@ -7,7 +7,8 @@ import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('../../lib/config.js', () => ({
   config: {
-    naraApiKey: 'test-nara-key',
+    dplaApiKey: 'test-dpla-key',
+    naraApiKey: null,
     replicateApiKey: 'test-replicate-key',
     clipModelVersion: 'test-version',
     supabaseUrl: 'https://test.supabase.co',
@@ -30,8 +31,8 @@ vi.mock('../../services/posterService.js', () => ({
 import {
   computeMetadataCompleteness,
   parseDateNormalized,
-  mapNaraRecord,
-  type NaraRawRecord,
+  mapDplaRecord,
+  type DplaItem,
 } from '../ingestWorker.js';
 
 // ─── computeMetadataCompleteness ──────────────────────────────────────────────
@@ -111,93 +112,157 @@ describe('parseDateNormalized', () => {
   });
 });
 
-// ─── mapNaraRecord ────────────────────────────────────────────────────────────
+// ─── mapDplaRecord ────────────────────────────────────────────────────────────
 
-describe('mapNaraRecord', () => {
+describe('mapDplaRecord', () => {
   const SERIES_ID = 'series-uuid';
   const SERIES_TITLE = 'WPA Posters';
 
-  const FULL_RECORD: NaraRawRecord = {
-    naId: 2696447,
-    title: 'America\'s Answer! Production',
-    scopeAndContentNote: 'Color lithograph poster encouraging production.',
-    coverageDate: { logicalDate: '1942' },
-    creators: [{ displayName: 'Federal Art Project' }],
-    objects: [
-      {
-        file: { url: 'https://nara.gov/img/poster.jpg' },
-        thumbnail: { url: 'https://nara.gov/img/poster-thumb.jpg' },
-      },
-    ],
-    subjectHeadings: [{ termName: 'World War II' }, { termName: 'Production' }],
-    physicalDescription: 'Silkscreen print, 71 x 56 cm',
-    reproductionNumber: 'LC-USZC4-1234',
+  const FULL_ITEM: DplaItem = {
+    id: 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4',
+    '@id': 'http://dp.la/api/items/a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4',
+    isShownAt: 'https://catalog.archives.gov/id/534144',
+    dataProvider: 'National Archives and Records Administration',
+    provider: {
+      '@id': 'http://dp.la/api/contributor/nara',
+      name: 'National Archives and Records Administration',
+    },
+    object: 'https://nara.gov/img/poster-thumb.jpg',
+    hasView: [{ '@id': 'https://nara.gov/img/poster.jpg', format: 'image/jpeg' }],
+    sourceResource: {
+      title: "America's Answer! Production",
+      description: 'Color lithograph poster encouraging wartime production.',
+      creator: 'Federal Art Project',
+      date: { begin: '1942', end: '1942', displayDate: 'ca. 1942' },
+      subject: [{ name: 'World War II' }, { name: 'Production' }],
+      format: 'Silkscreen print, 71 x 56 cm',
+      rights: 'No copyright restrictions known',
+      identifier: ['NAID-2696447'],
+    },
   };
 
-  it('maps all fields correctly from a full NARA record', () => {
-    const result = mapNaraRecord(FULL_RECORD, SERIES_ID, SERIES_TITLE);
+  it('maps all fields correctly from a full DPLA item', () => {
+    const result = mapDplaRecord(FULL_ITEM, SERIES_ID, SERIES_TITLE);
 
     expect(result).not.toBeNull();
     expect(result?.nara_id).toBe('2696447');
     expect(result?.title).toBe("America's Answer! Production");
-    expect(result?.description).toBe('Color lithograph poster encouraging production.');
-    expect(result?.date_created).toBe('1942');
+    expect(result?.description).toBe('Color lithograph poster encouraging wartime production.');
+    expect(result?.date_created).toBe('ca. 1942');
     expect(result?.creator).toBe('Federal Art Project');
     expect(result?.image_url).toBe('https://nara.gov/img/poster.jpg');
     expect(result?.thumbnail_url).toBe('https://nara.gov/img/poster-thumb.jpg');
     expect(result?.subject_tags).toEqual(['World War II', 'Production']);
     expect(result?.physical_description).toBe('Silkscreen print, 71 x 56 cm');
+    expect(result?.rights_statement).toBe('No copyright restrictions known');
     expect(result?.series_id).toBe(SERIES_ID);
     expect(result?.series_title).toBe(SERIES_TITLE);
   });
 
-  it('falls back to the image_url as thumbnail when no thumbnail object is present', () => {
-    const record: NaraRawRecord = {
-      ...FULL_RECORD,
-      objects: [{ file: { url: 'https://nara.gov/img/poster.jpg' } }],
-    };
-    const result = mapNaraRecord(record, SERIES_ID, SERIES_TITLE);
-    expect(result?.thumbnail_url).toBe('https://nara.gov/img/poster.jpg');
+  it('uses NARA NAID extracted from identifier when available', () => {
+    const result = mapDplaRecord(FULL_ITEM, SERIES_ID, SERIES_TITLE);
+    expect(result?.nara_id).toBe('2696447');
   });
 
-  it('normalizes the date to YYYY-01-01 format', () => {
-    const result = mapNaraRecord(FULL_RECORD, SERIES_ID, SERIES_TITLE);
+  it('falls back to "dpla-{id}" when no NARA identifier is present', () => {
+    const item: DplaItem = {
+      ...FULL_ITEM,
+      sourceResource: { ...FULL_ITEM.sourceResource, identifier: [] },
+    };
+    const result = mapDplaRecord(item, SERIES_ID, SERIES_TITLE);
+    expect(result?.nara_id).toBe(`dpla-${FULL_ITEM.id}`);
+  });
+
+  it('uses hasView[0] as image_url and object as thumbnail_url', () => {
+    const result = mapDplaRecord(FULL_ITEM, SERIES_ID, SERIES_TITLE);
+    expect(result?.image_url).toBe('https://nara.gov/img/poster.jpg');
+    expect(result?.thumbnail_url).toBe('https://nara.gov/img/poster-thumb.jpg');
+  });
+
+  it('falls back to object URL for both image and thumbnail when hasView is absent', () => {
+    const { hasView: _hasView, ...withoutHasView } = FULL_ITEM;
+    const item: DplaItem = withoutHasView;
+    const result = mapDplaRecord(item, SERIES_ID, SERIES_TITLE);
+    expect(result?.image_url).toBe('https://nara.gov/img/poster-thumb.jpg');
+    expect(result?.thumbnail_url).toBe('https://nara.gov/img/poster-thumb.jpg');
+  });
+
+  it('normalizes the date to YYYY-01-01 format using displayDate', () => {
+    const result = mapDplaRecord(FULL_ITEM, SERIES_ID, SERIES_TITLE);
     expect(result?.date_normalized).toBe('1942-01-01');
   });
 
-  it('handles a string coverageDate', () => {
-    const record: NaraRawRecord = { ...FULL_RECORD, coverageDate: 'ca. 1941-1943' };
-    const result = mapNaraRecord(record, SERIES_ID, SERIES_TITLE);
-    expect(result?.date_created).toBe('ca. 1941-1943');
-    expect(result?.date_normalized).toBe('1941-01-01');
+  it('handles an array title by taking the first element', () => {
+    const item: DplaItem = {
+      ...FULL_ITEM,
+      sourceResource: {
+        ...FULL_ITEM.sourceResource,
+        title: ['Primary Title', 'Alternative Title'],
+      },
+    };
+    const result = mapDplaRecord(item, SERIES_ID, SERIES_TITLE);
+    expect(result?.title).toBe('Primary Title');
   });
 
-  it('handles a string creator (not an object)', () => {
-    const record: NaraRawRecord = { ...FULL_RECORD, creators: ['Works Progress Administration'] };
-    const result = mapNaraRecord(record, SERIES_ID, SERIES_TITLE);
-    expect(result?.creator).toBe('Works Progress Administration');
+  it('handles an array creator by taking the first element', () => {
+    const item: DplaItem = {
+      ...FULL_ITEM,
+      sourceResource: {
+        ...FULL_ITEM.sourceResource,
+        creator: ['Federal Art Project', 'Office of War Information'],
+      },
+    };
+    const result = mapDplaRecord(item, SERIES_ID, SERIES_TITLE);
+    expect(result?.creator).toBe('Federal Art Project');
   });
 
-  it('returns null when naId is missing', () => {
-    const { naId: _, ...withoutId } = FULL_RECORD;
-    expect(mapNaraRecord(withoutId, SERIES_ID, SERIES_TITLE)).toBeNull();
+  it('handles date as an array by taking the first element', () => {
+    const item: DplaItem = {
+      ...FULL_ITEM,
+      sourceResource: {
+        ...FULL_ITEM.sourceResource,
+        date: [{ displayDate: '1943', begin: '1943' }],
+      },
+    };
+    const result = mapDplaRecord(item, SERIES_ID, SERIES_TITLE);
+    expect(result?.date_created).toBe('1943');
+  });
+
+  it('falls back to date.begin when displayDate is absent', () => {
+    const item: DplaItem = {
+      ...FULL_ITEM,
+      sourceResource: {
+        ...FULL_ITEM.sourceResource,
+        date: { begin: '1941', end: '1945' },
+      },
+    };
+    const result = mapDplaRecord(item, SERIES_ID, SERIES_TITLE);
+    expect(result?.date_created).toBe('1941');
+  });
+
+  it('returns null when item id is missing', () => {
+    const item = { ...FULL_ITEM, id: '' };
+    expect(mapDplaRecord(item, SERIES_ID, SERIES_TITLE)).toBeNull();
   });
 
   it('returns null when no image URL is present', () => {
-    const record: NaraRawRecord = { ...FULL_RECORD, objects: [] };
-    expect(mapNaraRecord(record, SERIES_ID, SERIES_TITLE)).toBeNull();
+    const { object: _object, ...withoutObject } = FULL_ITEM;
+    const item: DplaItem = { ...withoutObject, hasView: [] };
+    expect(mapDplaRecord(item, SERIES_ID, SERIES_TITLE)).toBeNull();
   });
 
   it('handles missing optional fields gracefully', () => {
-    const minimal: NaraRawRecord = {
-      naId: 999,
-      objects: [{ file: { url: 'https://nara.gov/img/x.jpg' } }],
+    const minimal: DplaItem = {
+      id: 'minimal-id',
+      object: 'https://nara.gov/img/x.jpg',
+      sourceResource: {},
     };
-    const result = mapNaraRecord(minimal, SERIES_ID, SERIES_TITLE);
+    const result = mapDplaRecord(minimal, SERIES_ID, SERIES_TITLE);
     expect(result).not.toBeNull();
     expect(result?.title).toBe('Untitled');
     expect(result?.creator).toBeNull();
     expect(result?.description).toBeNull();
     expect(result?.subject_tags).toEqual([]);
+    expect(result?.nara_id).toBe('dpla-minimal-id');
   });
 });

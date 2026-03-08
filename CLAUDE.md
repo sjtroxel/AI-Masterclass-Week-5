@@ -2,8 +2,11 @@
 
 ## Project Overview
 Poster Pilot is a professional-grade, multimodal RAG (Retrieval-Augmented Generation) platform
-for indexing and exploring the National Archives (NARA) poster corpus — WPA art, NASA mission
-posters, 19th-century patent medicine ads, and more. It is a Discovery Engine for visual history.
+for indexing and exploring historical poster collections — WPA art, NASA mission posters,
+19th-century patent medicine ads, WWII propaganda, and more. It is a Discovery Engine for
+visual history. Poster data is sourced via the DPLA API (Digital Public Library of America),
+which aggregates holdings from NARA, the Library of Congress, the Smithsonian, and other
+institutions. The content is still primarily NARA-originated; DPLA is the ingest gateway.
 
 ## Tech Stack
 - **Frontend**: React 19, TypeScript (strict), Tailwind CSS v4 (CSS-first, no JS config)
@@ -111,4 +114,4 @@ router.get('/posters/:id', async (req: Request, res: Response, next: NextFunctio
 - **No catching errors silently** — always log and either re-throw or return a typed error response
 - **The Archivist must cite sources** — every chatbot response must reference specific NARA metadata fields; it must NOT fabricate historical facts
 - **Confidence scores are mandatory** — every vector search result must return a `similarity_score`; The Human Handoff triggers at `similarity_score < 0.72`
-- **NARA data is read-only** — this platform indexes NARA content; it never modifies upstream records
+- **Source data is read-only** — this platform indexes poster content from DPLA/NARA; it never modifies upstream records

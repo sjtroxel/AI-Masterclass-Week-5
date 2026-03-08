@@ -1,18 +1,29 @@
 /**
- * Ingest Worker — Phase 3.4
+ * Ingest Worker — Phase 3.5
  *
- * Entry point: tsx server/workers/ingestWorker.ts [--series=<slug>] [--limit=<n>]
+ * Entry point: tsx server/src/workers/ingestWorker.ts [flags]
  *
- * Fetches poster records from the NARA Catalog API v2, generates CLIP image
- * embeddings via Replicate, and upserts rows into the Supabase `posters` table.
+ * Fetches poster records from the DPLA (Digital Public Library of America) API,
+ * generates CLIP image embeddings via Replicate, and upserts rows into the
+ * Supabase `posters` table.
  *
- * CLI options:
- *   --series=<slug>  Series slug to ingest (default: wpa-posters)
- *   --limit=<n>      Cap total posters processed — useful for test runs
+ * The primary data source was migrated from NARA Catalog API v2 to DPLA because
+ * the NARA API backend is currently unreachable (CloudFront serves SPA HTML for
+ * all /api/v2/ paths). DPLA aggregates NARA's digital collections alongside
+ * holdings from the Library of Congress, Smithsonian, and other institutions,
+ * providing equal or broader coverage of the same poster corpus.
+ *
+ * CLI flags:
+ *   --series=<slug>        Series slug to ingest (default: wpa-posters)
+ *   --limit=<n>            Cap total posters processed — useful for test runs
+ *   --dpla-query=<terms>   Override the default DPLA search query for this series
+ *   --fixture=<path>       Load a DPLA-format JSON fixture instead of calling the API
+ *   --random-embeddings    Bypass Replicate with random 768-dim unit vectors (DEV ONLY)
  *
  * Examples:
- *   tsx server/workers/ingestWorker.ts
- *   tsx server/workers/ingestWorker.ts --series=wpa-posters --limit=5
+ *   npm run ingest -- --series=wpa-posters --limit=10
+ *   npm run ingest -- --series=nasa-history --limit=5 --random-embeddings
+ *   npm run ingest -- --fixture=server/src/workers/__fixtures__/dpla-wpa-sample.json --random-embeddings
  */
 
 import { readFileSync } from 'fs';
@@ -23,49 +34,60 @@ import { upsertPoster, updateSeriesCentroid } from '../services/posterService.js
 import { cosineSimilarity } from '../lib/vectorMath.js';
 import type { IngestPosterData } from '@poster-pilot/shared';
 
-// ─── NARA Catalog API v2 types ────────────────────────────────────────────────
+// ─── DPLA API types ───────────────────────────────────────────────────────────
 //
-// Field paths are based on NARA Catalog API v2 (catalog.archives.gov/api/v2/).
+// DPLA returns JSON-LD records. Field paths verified against the DPLA Codex:
+//   https://dp.la/info/developers/codex/
 //
-// ⚠ VERIFY BEFORE PRODUCTION: Run a manual request against the live API and
-//   confirm these field names match the actual response structure.
-//   Key paths to verify:
-//     body.hits.hits[]._source.naId         → NARA record identifier
-//     body.hits.hits[]._source.scopeAndContentNote → description
-//     body.hits.hits[]._source.coverageDate → date (string or { logicalDate })
-//     body.hits.hits[]._source.creators[]   → { displayName } or string
-//     body.hits.hits[]._source.objects[].file.url    → full-res image URL
-//     body.hits.hits[]._source.objects[].thumbnail.url → thumbnail URL
-//     body.hits.hits[]._source.subjectHeadings[].termName → subject tags
-//     body.hits.hits[]._source.parentSeries.title    → series title confirmation
+// Key paths used:
+//   doc.id                              → DPLA item ID (unique hash)
+//   doc.object                          → thumbnail image URL
+//   doc.hasView[0]["@id"]               → full-resolution image URL
+//   doc.isShownAt                       → link to item at source institution
+//   doc.dataProvider                    → contributing institution name
+//   doc.provider.name                   → DPLA provider/aggregator name
+//   doc.sourceResource.title            → title (string or string[])
+//   doc.sourceResource.description      → description (string or string[])
+//   doc.sourceResource.creator          → creator (string or string[])
+//   doc.sourceResource.date.displayDate → human-readable date
+//   doc.sourceResource.date.begin       → start date (ISO-ish)
+//   doc.sourceResource.subject[].name   → subject tags
+//   doc.sourceResource.format           → format/medium description
+//   doc.sourceResource.rights           → rights statement
+//   doc.sourceResource.identifier       → array of identifiers (may include NARA NAIDs)
 
-export type NaraDigitalObject = {
-  file?: { url?: string };
-  thumbnail?: { url?: string };
+export type DplaDateField =
+  | { begin?: string; end?: string; displayDate?: string }
+  | Array<{ begin?: string; end?: string; displayDate?: string }>;
+
+export type DplaSourceResource = {
+  title?: string | string[];
+  description?: string | string[];
+  creator?: string | string[];
+  date?: DplaDateField;
+  subject?: Array<{ name?: string }>;
+  format?: string | string[];
+  rights?: string | string[];
+  identifier?: string | string[];
+  type?: string | string[];
 };
 
-export type NaraRawRecord = {
-  naId?: number | string;
-  title?: string;
-  scopeAndContentNote?: string;
-  coverageDate?: string | { logicalDate?: string };
-  creators?: Array<{ displayName?: string } | string>;
-  objects?: NaraDigitalObject[];
-  parentSeries?: { naId?: number | string; title?: string };
-  subjectHeadings?: Array<{ termName?: string }>;
-  physicalDescription?: string;
-  reproductionNumber?: string;
+export type DplaItem = {
+  id: string;
+  '@id'?: string;
+  isShownAt?: string;
+  dataProvider?: string | string[];
+  provider?: { '@id'?: string; name?: string };
+  object?: string;
+  hasView?: Array<{ '@id'?: string; format?: string }>;
+  sourceResource: DplaSourceResource;
 };
 
-type NaraHit = { _id?: string; _source?: NaraRawRecord };
-
-type NaraApiResponse = {
-  body?: {
-    hits?: {
-      total?: { value?: number };
-      hits?: NaraHit[];
-    };
-  };
+type DplaApiResponse = {
+  count: number;
+  start: number;
+  limit: number;
+  docs: DplaItem[];
 };
 
 type SeriesRow = {
@@ -78,11 +100,27 @@ type SeriesRow = {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const NARA_API_BASE = 'https://catalog.archives.gov/api/v2/';
+const DPLA_API_BASE = 'https://api.dp.la/v2/items';
+const DPLA_PAGE_SIZE = 100; // DPLA maximum per request
 const BATCH_SIZE = 5;
 const BATCH_DELAY_MS = 1000;
-const NARA_PAGE_SIZE = 100;
 const DEFAULT_SERIES_SLUG = 'wpa-posters';
+
+/**
+ * Default DPLA search queries keyed by series slug.
+ * Override any of these with the --dpla-query CLI flag.
+ *
+ * Queries are intentionally broad to capture the full range of posters
+ * that were previously accessible via the NARA Catalog API, plus additional
+ * items from non-NARA institutions (Library of Congress, Smithsonian, etc.)
+ * that match the same collection themes.
+ */
+const DPLA_SERIES_QUERIES: Record<string, string> = {
+  'wpa-posters': 'WPA poster',
+  'nasa-history': 'NASA poster',
+  'patent-medicine': 'patent medicine advertisement',
+  'wwii-propaganda': 'World War II propaganda poster',
+};
 
 // ─── CLI argument parsing ─────────────────────────────────────────────────────
 
@@ -91,11 +129,13 @@ function parseArgs(): {
   limit: number | null;
   fixturePath: string | null;
   randomEmbeddings: boolean;
+  dplaQueryOverride: string | null;
 } {
   const args = process.argv.slice(2);
   const seriesArg = args.find((a) => a.startsWith('--series='));
   const limitArg = args.find((a) => a.startsWith('--limit='));
   const fixtureArg = args.find((a) => a.startsWith('--fixture='));
+  const dplaQueryArg = args.find((a) => a.startsWith('--dpla-query='));
 
   const seriesSlug = seriesArg
     ? (seriesArg.split('=')[1] ?? DEFAULT_SERIES_SLUG)
@@ -106,11 +146,13 @@ function parseArgs(): {
 
   const fixturePath = fixtureArg ? (fixtureArg.split('=')[1] ?? null) : null;
 
+  const dplaQueryOverride = dplaQueryArg ? (dplaQueryArg.split('=').slice(1).join('=') ?? null) : null;
+
   // --random-embeddings: DEV ONLY — bypasses Replicate with random 768-dim unit vectors.
   // Use this when Replicate credits are unavailable to verify the rest of the pipeline.
   const randomEmbeddings = args.includes('--random-embeddings');
 
-  return { seriesSlug, limit, fixturePath, randomEmbeddings };
+  return { seriesSlug, limit, fixturePath, randomEmbeddings, dplaQueryOverride };
 }
 
 /**
@@ -153,7 +195,7 @@ export function computeMetadataCompleteness(partial: {
 }
 
 /**
- * Best-effort conversion of NARA's free-form date strings to ISO date format.
+ * Best-effort conversion of free-form date strings to ISO date format.
  * Extracts the first 4-digit year and returns "YYYY-01-01", or null if no year found.
  *
  * Examples:
@@ -168,58 +210,98 @@ export function parseDateNormalized(dateStr: string | null): string | null {
 }
 
 /**
- * Maps a raw NARA Catalog API v2 record to our IngestPosterData shape.
+ * Returns the first element of a DPLA field that may be a string or string[].
+ * Returns null if the field is absent or the array is empty.
+ */
+function firstString(field: string | string[] | undefined): string | null {
+  if (field == null) return null;
+  if (Array.isArray(field)) return field[0] ?? null;
+  return field;
+}
+
+/**
+ * Extracts a display date string from DPLA's polymorphic date field.
+ * DPLA may return a single date object or an array of date objects.
+ * Prefers displayDate, falls back to begin.
+ */
+function extractDplaDate(date: DplaDateField | undefined): string | null {
+  if (date == null) return null;
+  const entry = Array.isArray(date) ? date[0] : date;
+  if (entry == null) return null;
+  return entry.displayDate ?? entry.begin ?? null;
+}
+
+/**
+ * Attempts to extract an original NARA NAID from DPLA's identifier array.
+ * DPLA items sourced from NARA often include identifiers like "NAID-2696447".
+ * Returns null if no NARA identifier is found.
+ */
+function extractNaraId(identifiers: string | string[] | undefined): string | null {
+  if (identifiers == null) return null;
+  const list = Array.isArray(identifiers) ? identifiers : [identifiers];
+  for (const id of list) {
+    // Match patterns like "NAID-2696447" or "naid:2696447"
+    const match = /(?:NAID[-:]|naId[-:])(\d+)/i.exec(id);
+    if (match?.[1] != null) return match[1];
+  }
+  return null;
+}
+
+/**
+ * Maps a raw DPLA API item to our IngestPosterData shape.
  *
  * Returns null (and the caller will skip the record) if either:
- *   - naId is missing (cannot identify the record)
+ *   - The DPLA item ID is missing (cannot identify the record)
  *   - No image URL is present (nothing to embed)
+ *
+ * The `nara_id` field is populated with:
+ *   1. The original NARA NAID if found in sourceResource.identifier, or
+ *   2. "dpla-{id}" as a stable, unique fallback identifier.
  *
  * Confidence scores and embedding are NOT set here; the caller computes them.
  */
-export function mapNaraRecord(
-  raw: NaraRawRecord,
+export function mapDplaRecord(
+  item: DplaItem,
   seriesId: string,
   seriesTitle: string,
 ): Omit<IngestPosterData, 'embedding' | 'embedding_confidence' | 'metadata_completeness' | 'overall_confidence'> | null {
-  const naraId = raw.naId != null ? String(raw.naId) : null;
-  if (!naraId) return null;
+  if (!item.id) return null;
 
-  const imageUrl = raw.objects?.[0]?.file?.url ?? null;
+  // Prefer the full-resolution hasView URL; fall back to the thumbnail object URL.
+  const imageUrl = item.hasView?.[0]?.['@id'] ?? item.object ?? null;
   if (!imageUrl) return null;
 
-  const thumbnailUrl = raw.objects?.[0]?.thumbnail?.url ?? imageUrl;
+  const thumbnailUrl = item.object ?? imageUrl;
 
-  const firstCreator = raw.creators?.[0];
-  const creator =
-    firstCreator == null
-      ? null
-      : typeof firstCreator === 'string'
-        ? firstCreator
-        : (firstCreator.displayName ?? null);
+  // Use original NARA ID if this item came from NARA, otherwise use DPLA's ID prefixed
+  // with "dpla-" to distinguish it from NARA NAIDs and keep it globally unique.
+  const naraId =
+    extractNaraId(item.sourceResource.identifier) ?? `dpla-${item.id}`;
 
-  const rawDate = raw.coverageDate;
-  const dateCreated =
-    typeof rawDate === 'string'
-      ? rawDate
-      : rawDate?.logicalDate ?? null;
+  const title = firstString(item.sourceResource.title) ?? 'Untitled';
+  const description = firstString(item.sourceResource.description);
+  const creator = firstString(item.sourceResource.creator);
+  const dateCreated = extractDplaDate(item.sourceResource.date);
+  const rightsStatement = firstString(item.sourceResource.rights);
+  const physicalDescription = firstString(item.sourceResource.format);
 
-  const subjectTags = (raw.subjectHeadings ?? [])
-    .map((h) => h.termName)
-    .filter((t): t is string => t != null);
+  const subjectTags = (item.sourceResource.subject ?? [])
+    .map((s) => s.name)
+    .filter((n): n is string => n != null && n.length > 0);
 
   return {
     nara_id: naraId,
-    title: raw.title ?? 'Untitled',
+    title,
     date_created: dateCreated,
     date_normalized: parseDateNormalized(dateCreated),
     creator,
-    description: raw.scopeAndContentNote ?? null,
+    description,
     subject_tags: subjectTags,
     series_title: seriesTitle,
     series_id: seriesId,
-    physical_description: raw.physicalDescription ?? null,
-    reproduction_number: raw.reproductionNumber ?? null,
-    rights_statement: null,
+    physical_description: physicalDescription,
+    reproduction_number: null,
+    rights_statement: rightsStatement,
     image_url: imageUrl,
     thumbnail_url: thumbnailUrl,
     ingest_version: 1,
@@ -260,7 +342,6 @@ async function getSeriesRecord(slug: string): Promise<SeriesRow> {
     );
   }
 
-  // Cast to an intermediate type to safely extract and parse the centroid.
   const raw = data as {
     id: string;
     slug: string;
@@ -278,102 +359,73 @@ async function getSeriesRecord(slug: string): Promise<SeriesRow> {
   };
 }
 
-// ─── NARA API helpers ─────────────────────────────────────────────────────────
+// ─── DPLA API helpers ─────────────────────────────────────────────────────────
 
-function buildNaraQueryUrl(seriesRef: string | null, offset: number, rows: number): string {
+function buildDplaQueryUrl(query: string, page: number): string {
   const params = new URLSearchParams({
-    resultTypes: 'item',
-    rows: String(rows),
-    offset: String(offset),
+    q: query,
+    page_size: String(DPLA_PAGE_SIZE),
+    page: String(page),
+    api_key: config.dplaApiKey,
   });
-
-  if (seriesRef != null) {
-    // Strip prefix (e.g. 'ARC-558544' → '558544', 'NAID-17490055' → '17490055')
-    // Requires at least 5 digits to avoid matching short codes like 'RG-88'
-    const numericId = /-(\d{5,})/.exec(seriesRef)?.[1];
-    if (numericId != null) {
-      params.set('parentNaId', numericId);
-    } else {
-      // Fall back to a text search using the raw series ref
-      params.set('q', `"${seriesRef}"`);
-    }
-  }
-
-  return `${NARA_API_BASE}?${params.toString()}`;
+  return `${DPLA_API_BASE}?${params.toString()}`;
 }
 
-async function fetchNaraPage(
-  url: string,
-): Promise<{ records: NaraRawRecord[]; total: number }> {
-  const response = await fetch(url, {
-    headers: { 'x-api-key': config.naraApiKey },
-  });
+async function fetchDplaPage(url: string): Promise<{ items: DplaItem[]; count: number }> {
+  const response = await fetch(url);
 
   if (!response.ok) {
     throw new Error(
-      `NARA API request failed: HTTP ${response.status} ${response.statusText} — ${url}`,
+      `DPLA API request failed: HTTP ${response.status} ${response.statusText} — ${url}`,
     );
   }
 
-  const json = (await response.json()) as NaraApiResponse;
-  const hits = json.body?.hits?.hits ?? [];
-  const total = json.body?.hits?.total?.value ?? 0;
-  const records = hits
-    .map((h) => h._source)
-    .filter((s): s is NaraRawRecord => s != null);
-
-  return { records, total };
+  const json = (await response.json()) as DplaApiResponse;
+  return { items: json.docs ?? [], count: json.count ?? 0 };
 }
 
 /**
- * Loads a NARA API response fixture from a local JSON file.
- * Used when `--fixture=<path>` is passed — bypasses the live NARA API.
- * Mirrors the shape of `fetchAllNaraRecords` so the rest of the pipeline is identical.
+ * Loads a DPLA API response fixture from a local JSON file.
+ * Used when `--fixture=<path>` is passed — bypasses the live DPLA API.
+ * The fixture must be a JSON file shaped like DplaApiResponse.
  */
-function loadFixtureRecords(fixturePath: string, limit: number | null): NaraRawRecord[] {
+function loadFixtureItems(fixturePath: string, limit: number | null): DplaItem[] {
   // eslint-disable-next-line no-console
   console.log(`[ingestWorker] ⚠ FIXTURE MODE — loading records from: ${fixturePath}`);
   const raw = readFileSync(fixturePath, 'utf-8');
-  const parsed = JSON.parse(raw) as NaraApiResponse;
-  const hits = parsed.body?.hits?.hits ?? [];
-  const records = hits
-    .map((h) => h._source)
-    .filter((s): s is NaraRawRecord => s != null);
-  return limit != null ? records.slice(0, limit) : records;
+  const parsed = JSON.parse(raw) as DplaApiResponse;
+  const items = parsed.docs ?? [];
+  return limit != null ? items.slice(0, limit) : items;
 }
 
-async function fetchAllNaraRecords(
-  seriesRef: string | null,
-  limit: number | null,
-): Promise<NaraRawRecord[]> {
-  const allRecords: NaraRawRecord[] = [];
+async function fetchAllDplaItems(query: string, limit: number | null): Promise<DplaItem[]> {
+  const allItems: DplaItem[] = [];
 
-  // Fetch first page to learn the total count
-  const firstUrl = buildNaraQueryUrl(seriesRef, 0, NARA_PAGE_SIZE);
-  const { records: firstPage, total } = await fetchNaraPage(firstUrl);
-  allRecords.push(...firstPage);
+  // Fetch first page to learn total count
+  const firstUrl = buildDplaQueryUrl(query, 1);
+  const { items: firstPage, count } = await fetchDplaPage(firstUrl);
+  allItems.push(...firstPage);
 
   // eslint-disable-next-line no-console
-  console.log(`[ingestWorker] NARA reports ${total} total records for this series`);
+  console.log(`[ingestWorker] DPLA reports ${count} total items for query: "${query}"`);
 
-  if (limit != null && allRecords.length >= limit) {
-    return allRecords.slice(0, limit);
+  if (limit != null && allItems.length >= limit) {
+    return allItems.slice(0, limit);
   }
 
-  let offset = NARA_PAGE_SIZE;
+  const totalPages = Math.ceil(count / DPLA_PAGE_SIZE);
 
-  while (offset < total) {
-    const url = buildNaraQueryUrl(seriesRef, offset, NARA_PAGE_SIZE);
-    const { records } = await fetchNaraPage(url);
-    allRecords.push(...records);
-    offset += NARA_PAGE_SIZE;
+  for (let page = 2; page <= totalPages; page++) {
+    const url = buildDplaQueryUrl(query, page);
+    const { items } = await fetchDplaPage(url);
+    allItems.push(...items);
 
-    if (limit != null && allRecords.length >= limit) break;
+    if (limit != null && allItems.length >= limit) break;
 
     await sleep(500); // brief delay between pagination calls
   }
 
-  return limit != null ? allRecords.slice(0, limit) : allRecords;
+  return limit != null ? allItems.slice(0, limit) : allItems;
 }
 
 // ─── Concurrency helpers ──────────────────────────────────────────────────────
@@ -412,17 +464,17 @@ async function processInBatches<T>(
 // ─── Per-poster processing ────────────────────────────────────────────────────
 
 async function processPoster(
-  raw: NaraRawRecord,
+  item: DplaItem,
   index: number,
   series: SeriesRow,
   useRandomEmbeddings: boolean,
 ): Promise<void> {
-  const mapped = mapNaraRecord(raw, series.id, series.title);
+  const mapped = mapDplaRecord(item, series.id, series.title);
 
   if (!mapped) {
     // eslint-disable-next-line no-console
     console.warn(
-      `[ingestWorker] [${index + 1}] Skipping record — missing nara_id or image_url`,
+      `[ingestWorker] [${index + 1}] Skipping item ${item.id} — missing image URL`,
     );
     return;
   }
@@ -475,13 +527,18 @@ async function processPoster(
 // ─── Entry point ──────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
-  const { seriesSlug, limit, fixturePath, randomEmbeddings } = parseArgs();
+  const { seriesSlug, limit, fixturePath, randomEmbeddings, dplaQueryOverride } = parseArgs();
+
+  const dplaQuery =
+    dplaQueryOverride ??
+    DPLA_SERIES_QUERIES[seriesSlug] ??
+    seriesSlug.replace(/-/g, ' ');
 
   // eslint-disable-next-line no-console
   console.log(
     `[ingestWorker] Starting ingest for series: ${seriesSlug}` +
       (limit != null ? ` (limit: ${limit} posters)` : '') +
-      (fixturePath != null ? ` (fixture: ${fixturePath})` : '') +
+      (fixturePath != null ? ` (fixture: ${fixturePath})` : ` (DPLA query: "${dplaQuery}")`) +
       (randomEmbeddings ? ' ⚠ RANDOM EMBEDDINGS — dev mode, not for production' : ''),
   );
 
@@ -493,18 +550,19 @@ async function main(): Promise<void> {
     `[ingestWorker] Series centroid: ${series.centroid != null ? 'exists' : 'none — first run, embedding_confidence will be 0.0'}`,
   );
 
-  const rawRecords =
+  const dplaItems =
     fixturePath != null
-      ? loadFixtureRecords(fixturePath, limit)
-      : await fetchAllNaraRecords(series.nara_series_ref, limit);
+      ? loadFixtureItems(fixturePath, limit)
+      : await fetchAllDplaItems(dplaQuery, limit);
+
   // eslint-disable-next-line no-console
-  console.log(`[ingestWorker] Processing ${rawRecords.length} records...`);
+  console.log(`[ingestWorker] Processing ${dplaItems.length} records...`);
 
   await processInBatches(
-    rawRecords,
+    dplaItems,
     BATCH_SIZE,
     BATCH_DELAY_MS,
-    (record, index) => processPoster(record, index, series, randomEmbeddings),
+    (item, index) => processPoster(item, index, series, randomEmbeddings),
   );
 
   // eslint-disable-next-line no-console

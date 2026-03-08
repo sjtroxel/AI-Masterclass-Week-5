@@ -15,7 +15,10 @@ const envSchema = z
     SUPABASE_URL: z.string().url(), // Changed to .string().url() for better compatibility
     SUPABASE_ANON_KEY: z.string().min(1),
     SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
-    NARA_API_KEY: z.string().min(1),
+    // NARA_API_KEY is optional — the NARA Catalog API is currently offline.
+    // Primary data source has been migrated to DPLA.
+    NARA_API_KEY: z.string().min(1).optional(),
+    DPLA_API_KEY: z.string().min(1),
     REPLICATE_API_KEY: z.string().min(1),
     CLIP_MODEL_VERSION: z.string().min(1),
     PORT: z.coerce.number().int().positive().default(3001),
@@ -26,7 +29,8 @@ const envSchema = z
     supabaseUrl: env.SUPABASE_URL,
     supabaseAnonKey: env.SUPABASE_ANON_KEY,
     supabaseServiceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
-    naraApiKey: env.NARA_API_KEY,
+    naraApiKey: env.NARA_API_KEY ?? null,
+    dplaApiKey: env.DPLA_API_KEY,
     replicateApiKey: env.REPLICATE_API_KEY,
     clipModelVersion: env.CLIP_MODEL_VERSION,
     port: env.PORT,
