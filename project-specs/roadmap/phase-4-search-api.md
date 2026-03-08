@@ -1,5 +1,7 @@
 # Phase 4 — Search API
 
+**Status**: ✅ Complete — 165 tests passing, typecheck clean.
+
 **Depends on**: [Phase 3 — Ingestion Pipeline](./phase-3-ingestion.md)
   (real poster data with embeddings must be in Supabase to test against)
 **Next phase**: [Phase 5 — Archivist API](./phase-5-archivist-api.md)
@@ -75,14 +77,21 @@ Unit tests (mocked):
 - Zero direct `res.status(500)` calls — all errors go to `next(err)`
 
 ### 4.6 — `server/services/posterService.ts` — remaining read methods
-- `getById(id: string): Promise<Poster | null>` — explicit column list, no `embedding` column
-- `getBySeriesSlug(slug: string, page: number, limit: number): Promise<PosterSummary[]>`
-- `getVisualSiblings(posterId: string): Promise<PosterSummary[]>` — calls `get_visual_siblings` RPC
+- `getById(id: string): Promise<Poster>` — explicit column list, no `embedding` column;
+  throws `NotFoundError` (→ 404) instead of returning null — cleaner call-site contract
+- `getBySeriesSlug(slug: string, page: number, limit: number): Promise<SeriesPageResponse>` —
+  resolves series by slug (throws `NotFoundError` if absent), then paginates poster summaries;
+  returns `{ series, posters, total, page, limit }` so callers have full pagination context
+- `getVisualSiblings(posterId: string): Promise<VisualSibling[]>` — calls `get_visual_siblings`
+  RPC; `VisualSibling` is a new shared type mirroring the RPC's RETURNS TABLE exactly
 
-### 4.7 — `server/routes/posters.ts`
-- `GET /api/posters/:id` — validates UUID format, calls `posterService.getById()`, 404 if null
-- `GET /api/series/:slug` — returns series metadata + paginated posters
-- `GET /api/posters/:id/siblings` — returns Visual Siblings
+### 4.7 — Poster and Series routes
+- **`server/routes/posters.ts`**: `GET /api/posters/:id` and `GET /api/posters/:id/siblings`
+  (siblings route calls `getById` first to guarantee a clean 404 before hitting the RPC)
+- **`server/routes/series.ts`** *(new file)*: `GET /api/series/:slug` with Zod-coerced
+  `page` / `limit` query params (defaults: page=1, limit=20; max limit=100).
+  Extracted to its own file per the "one file per resource" rule — series is a distinct resource.
+- Both routers mounted in `index.ts`: `/api/posters` and `/api/series`
 
 ### 4.8 — Search event logging
 - `logSearchEvent(event: Partial<SearchEvent>): Promise<void>` in `posterService.ts`
@@ -96,10 +105,14 @@ Unit tests (mocked):
 ## Testing Checkpoint
 
 - All `searchService` and `queryAnalyzer` unit tests pass (all mocked — no live API calls)
+- `posterService` unit tests cover `getById`, `getBySeriesSlug`, `getVisualSiblings`
+  in addition to the ingest methods from Phase 3
+- Route integration tests (`routes/__tests__/posters.test.ts`) cover all happy paths,
+  404s, 400 (invalid UUID / slug / query params), and 500 (DatabaseError) via supertest
 - Manual API tests with `curl` or a REST client:
   - Text search returns real posters with `similarity_score` values
   - A nonsense query triggers `handoff_needed: true` with a `handoff_reason`
   - `GET /api/posters/:id` returns full detail (no `embedding` field in response)
   - A fake UUID returns 404
 - Verify search event rows appear in `poster_search_events` table after each search
-- `npm test` — full suite green; `npm run typecheck` — clean
+- ✅ `npm test` — 165 tests, all passing; `npm run typecheck` — clean

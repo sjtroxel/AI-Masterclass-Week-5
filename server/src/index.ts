@@ -9,6 +9,7 @@ import { supabase } from './lib/supabase.js';
 import { errorHandler, NotFoundError } from './middleware/errorHandler.js';
 import type { HealthResponse } from '@poster-pilot/shared';
 import postersRouter from './routes/posters.js';
+import seriesRouter from './routes/series.js';
 import searchRouter from './routes/search.js';
 import chatRouter from './routes/chat.js';
 
@@ -17,6 +18,11 @@ const app = express();
 // ── Security middleware — strict order per security.md ────────────────────────
 app.use(helmet());
 app.use(cors({ origin: config.clientOrigin }));
+// Raise body limit for the search route BEFORE the global parser so the global
+// 1 MB cap never applies to image payloads (base64 5 MB image ≈ 7 MB string).
+// body-parser skips re-parsing when req.body is already set, so the global
+// middleware below becomes a no-op for /api/search.
+app.use('/api/search', express.json({ limit: '8mb' }));
 app.use(express.json({ limit: '1mb' }));
 app.use(
   '/api/',
@@ -54,6 +60,7 @@ app.get(
 );
 
 app.use('/api/posters', postersRouter);
+app.use('/api/series', seriesRouter);
 app.use('/api/search', searchRouter);
 app.use('/api/chat', chatRouter);
 

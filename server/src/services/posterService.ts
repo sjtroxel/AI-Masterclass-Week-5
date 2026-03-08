@@ -1,7 +1,16 @@
 import { supabase } from '../lib/supabase.js';
-import { DatabaseError } from '../middleware/errorHandler.js';
-import type { IngestPosterData, Poster } from '@poster-pilot/shared';
-import { CLIP_EMBEDDING_DIMENSIONS } from '@poster-pilot/shared';
+import { DatabaseError, NotFoundError } from '../middleware/errorHandler.js';
+import type {
+  IngestPosterData,
+  Poster,
+  PosterSummary,
+  Series,
+  VisualSibling,
+  SeriesPageResponse,
+  QueryMode,
+  HandoffReason,
+} from '@poster-pilot/shared';
+import { CLIP_EMBEDDING_DIMENSIONS, HUMAN_HANDOFF_THRESHOLD } from '@poster-pilot/shared';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -30,6 +39,14 @@ const POSTER_COLUMNS = [
   'last_updated_at',
   'ingest_version',
 ].join(', ');
+
+// Lightweight column list for grid/list views — no embedding, no heavy text fields.
+const POSTER_SUMMARY_COLUMNS =
+  'id, nara_id, title, thumbnail_url, series_title, overall_confidence';
+
+// Series columns — centroid vector is intentionally excluded (large, never returned to clients).
+const SERIES_COLUMNS =
+  'id, slug, title, description, nara_series_ref, poster_count, created_at';
 
 // ─── Internal types ───────────────────────────────────────────────────────────
 
@@ -203,4 +220,144 @@ export async function updateSeriesCentroid(seriesId: string): Promise<void> {
       `Failed to update centroid for series ${seriesId}: ${updateError.message}`,
     );
   }
+}
+
+// ─── Search event logging ──────────────────────────────────────────────────────
+
+type LogSearchEventParams = {
+  session_id: string;
+  query_text: string | null;
+  query_mode: QueryMode;
+  result_poster_ids: string[];
+  top_similarity_score: number | null;
+  min_similarity_score: number | null;
+  result_count: number;
+  human_handoff_needed: boolean;
+  handoff_reason: HandoffReason | null;
+  latency_ms: number | null;
+  clip_latency_ms: number | null;
+  db_latency_ms: number | null;
+};
+
+/**
+ * Inserts a row into `poster_search_events` for analytics and Human Handoff reporting.
+ *
+ * Fire-and-forget: this function is synchronous (returns void immediately).
+ * The insert runs in the background and never delays the search response.
+ * Failures are logged to stderr but never propagated to the caller.
+ */
+export function logSearchEvent(params: LogSearchEventParams): void {
+  // Supabase's builder is PromiseLike (has .then) but not a full Promise (.catch is absent).
+  // Wrapping in an async IIFE gives us a real Promise with proper error handling.
+  void (async () => {
+    try {
+      await supabase.from('poster_search_events').insert({
+        ...params,
+        handoff_threshold_used: HUMAN_HANDOFF_THRESHOLD,
+        human_handoff_triggered: false,
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[posterService] logSearchEvent failed:', err);
+    }
+  })();
+}
+
+// ─── Poster read methods (Phase 4.6) ──────────────────────────────────────────
+
+/**
+ * Fetches a single poster by UUID.
+ * Throws NotFoundError (→ HTTP 404) if no row exists for the given ID.
+ * Never returns the embedding column.
+ */
+export async function getById(id: string): Promise<Poster> {
+  const { data, error } = await supabase
+    .from('posters')
+    .select(POSTER_COLUMNS)
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error) {
+    throw new DatabaseError(`Failed to fetch poster ${id}: ${error.message}`);
+  }
+  if (!data) {
+    throw new NotFoundError(`Poster not found: ${id}`);
+  }
+
+  return data as unknown as Poster;
+}
+
+/**
+ * Fetches paginated PosterSummary rows for a series, identified by its slug.
+ * Throws NotFoundError if the slug does not match any series.
+ * Results are ordered by overall_confidence descending (best matches first).
+ */
+export async function getBySeriesSlug(
+  slug: string,
+  page: number,
+  limit: number,
+): Promise<SeriesPageResponse> {
+  // Step 1: Resolve series row by slug — never expose the centroid vector.
+  const { data: seriesData, error: seriesError } = await supabase
+    .from('series')
+    .select(SERIES_COLUMNS)
+    .eq('slug', slug)
+    .maybeSingle();
+
+  if (seriesError) {
+    throw new DatabaseError(`Failed to fetch series '${slug}': ${seriesError.message}`);
+  }
+  if (!seriesData) {
+    throw new NotFoundError(`Series not found: ${slug}`);
+  }
+
+  const series = seriesData as unknown as Series;
+
+  // Step 2: Fetch paginated poster summaries for this series.
+  const offset = (page - 1) * limit;
+
+  const {
+    data: postersData,
+    count,
+    error: postersError,
+  } = await supabase
+    .from('posters')
+    .select(POSTER_SUMMARY_COLUMNS, { count: 'exact' })
+    .eq('series_id', series.id)
+    .order('overall_confidence', { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (postersError) {
+    throw new DatabaseError(
+      `Failed to fetch posters for series '${slug}': ${postersError.message}`,
+    );
+  }
+
+  return {
+    series,
+    posters: (postersData ?? []) as unknown as PosterSummary[],
+    total: count ?? 0,
+    page,
+    limit,
+  };
+}
+
+/**
+ * Calls the get_visual_siblings RPC to find visually similar posters.
+ * The caller is responsible for verifying the source poster exists before calling this.
+ * Returns up to 5 siblings ordered by visual similarity (cosine distance via pgvector).
+ */
+export async function getVisualSiblings(posterId: string): Promise<VisualSibling[]> {
+  const { data, error } = await supabase.rpc('get_visual_siblings', {
+    source_poster_id: posterId,
+    sibling_count: 5,
+  });
+
+  if (error) {
+    throw new DatabaseError(
+      `get_visual_siblings RPC failed for poster ${posterId}: ${error.message}`,
+    );
+  }
+
+  return (data ?? []) as VisualSibling[];
 }

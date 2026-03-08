@@ -101,7 +101,8 @@ export type PosterResult = {
 // ─── Search ───────────────────────────────────────────────────────────────────
 
 export type SearchRequest = {
-  query: string;
+  query?: string;   // required for text, vibe, hybrid; absent for image-only
+  image?: string;   // base64 data URI or HTTPS URL; required for image and hybrid
   mode: QueryMode;
   series_filter?: string;
   limit?: number;
@@ -159,6 +160,29 @@ export type ArchivistResponse = {
   human_handoff_needed: boolean;
   handoff_reason?: HandoffReason;
   retrieved_poster_ids: string[];
+};
+
+// ─── Poster detail endpoints ──────────────────────────────────────────────────
+
+/**
+ * Row returned by the get_visual_siblings RPC function.
+ * Mirrors the RETURNS TABLE definition exactly — subset of PosterResult.
+ */
+export type VisualSibling = {
+  id: string;
+  nara_id: string;
+  title: string;
+  thumbnail_url: string;
+  similarity_score: number;
+};
+
+/** Response shape for GET /api/series/:slug. */
+export type SeriesPageResponse = {
+  series: Series;
+  posters: PosterSummary[];
+  total: number;
+  page: number;
+  limit: number;
 };
 
 // ─── API Envelope ─────────────────────────────────────────────────────────────

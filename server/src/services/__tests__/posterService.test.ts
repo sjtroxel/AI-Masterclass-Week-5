@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { IngestPosterData, Poster } from '@poster-pilot/shared';
-import { DatabaseError } from '../../middleware/errorHandler.js';
+import { DatabaseError, NotFoundError } from '../../middleware/errorHandler.js';
 
 // ─── Supabase mock ────────────────────────────────────────────────────────────
 // We mock the entire supabase module, which also prevents config.ts from running
@@ -8,12 +8,20 @@ import { DatabaseError } from '../../middleware/errorHandler.js';
 // missing env vars).
 
 const mockFrom = vi.hoisted(() => vi.fn());
+const mockRpc = vi.hoisted(() => vi.fn());
 
 vi.mock('../../lib/supabase.js', () => ({
-  supabase: { from: mockFrom },
+  supabase: { from: mockFrom, rpc: mockRpc },
 }));
 
-import { upsertPoster, updateSeriesCentroid } from '../posterService.js';
+import {
+  upsertPoster,
+  updateSeriesCentroid,
+  getById,
+  getBySeriesSlug,
+  getVisualSiblings,
+} from '../posterService.js';
+import type { Series, VisualSibling } from '@poster-pilot/shared';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -32,11 +40,36 @@ function makeChainable<T>(result: MockResult<T>) {
     insert: vi.fn().mockReturnThis(),
     update: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
+    range: vi.fn().mockReturnThis(),
     single: vi.fn().mockResolvedValue(result),
     maybeSingle: vi.fn().mockResolvedValue(result),
     // Allows `await supabase.from(...).chain()` without a terminal method
     then: (
       resolve: (value: MockResult<T>) => unknown,
+      reject?: (reason: unknown) => unknown,
+    ) => Promise.resolve(result).then(resolve, reject),
+  };
+  return builder;
+}
+
+type PaginatedResult<T> =
+  | { data: T[]; count: number; error: null }
+  | { data: null; count: null; error: { message: string } };
+
+/**
+ * Chainable builder mock for paginated Supabase queries that use
+ * .select(cols, { count: 'exact' }).eq().order().range().
+ * The builder resolves directly (no .single()/.maybeSingle() terminal).
+ */
+function makePaginatedChainable<T>(result: PaginatedResult<T>) {
+  const builder = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
+    range: vi.fn().mockReturnThis(),
+    then: (
+      resolve: (value: PaginatedResult<T>) => unknown,
       reject?: (reason: unknown) => unknown,
     ) => Promise.resolve(result).then(resolve, reject),
   };
@@ -245,5 +278,157 @@ describe('updateSeriesCentroid', () => {
     mockFrom.mockReturnValueOnce(fetchBuilder).mockReturnValueOnce(updateBuilder);
 
     await expect(updateSeriesCentroid('series-uuid')).rejects.toThrow(DatabaseError);
+  });
+});
+
+// ─── getById ──────────────────────────────────────────────────────────────────
+
+describe('getById', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns the poster when found', async () => {
+    const builder = makeChainable({ data: MOCK_POSTER, error: null });
+    mockFrom.mockReturnValueOnce(builder);
+
+    const result = await getById('poster-uuid');
+
+    expect(result).toEqual(MOCK_POSTER);
+    expect(builder.eq).toHaveBeenCalledWith('id', 'poster-uuid');
+    expect(builder.maybeSingle).toHaveBeenCalledOnce();
+  });
+
+  it('throws NotFoundError when no row exists', async () => {
+    const builder = makeChainable({ data: null, error: null });
+    mockFrom.mockReturnValueOnce(builder);
+
+    await expect(getById('poster-uuid')).rejects.toThrow(NotFoundError);
+  });
+
+  it('throws DatabaseError when the query fails', async () => {
+    const builder = makeChainable({
+      data: null,
+      error: { message: 'connection timeout' },
+    });
+    mockFrom.mockReturnValueOnce(builder);
+
+    await expect(getById('poster-uuid')).rejects.toThrow(DatabaseError);
+  });
+});
+
+// ─── getBySeriesSlug ──────────────────────────────────────────────────────────
+
+const MOCK_SERIES: Series = {
+  id: 'series-uuid',
+  slug: 'wpa-posters',
+  title: 'WPA Posters',
+  description: 'Works Progress Administration posters',
+  nara_series_ref: null,
+  poster_count: 42,
+  created_at: '2026-01-01T00:00:00Z',
+};
+
+describe('getBySeriesSlug', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns series metadata and paginated posters', async () => {
+    const seriesBuilder = makeChainable({ data: MOCK_SERIES, error: null });
+    const posterId = 'poster-uuid';
+    const posters = [
+      { id: posterId, nara_id: 'nara-001', title: 'T', thumbnail_url: 'u', series_title: 'WPA Posters', overall_confidence: 0.9 },
+    ];
+    const postersBuilder = makePaginatedChainable({ data: posters, count: 42, error: null });
+    mockFrom.mockReturnValueOnce(seriesBuilder).mockReturnValueOnce(postersBuilder);
+
+    const result = await getBySeriesSlug('wpa-posters', 1, 20);
+
+    expect(result.series).toEqual(MOCK_SERIES);
+    expect(result.total).toBe(42);
+    expect(result.page).toBe(1);
+    expect(result.limit).toBe(20);
+    expect(result.posters).toHaveLength(1);
+    expect(postersBuilder.order).toHaveBeenCalledWith('overall_confidence', { ascending: false });
+    expect(postersBuilder.range).toHaveBeenCalledWith(0, 19);
+  });
+
+  it('calculates correct range offset for page 2', async () => {
+    const seriesBuilder = makeChainable({ data: MOCK_SERIES, error: null });
+    const postersBuilder = makePaginatedChainable({ data: [], count: 0, error: null });
+    mockFrom.mockReturnValueOnce(seriesBuilder).mockReturnValueOnce(postersBuilder);
+
+    await getBySeriesSlug('wpa-posters', 2, 10);
+
+    // page=2, limit=10 → offset=10, range(10, 19)
+    expect(postersBuilder.range).toHaveBeenCalledWith(10, 19);
+  });
+
+  it('throws NotFoundError when the series slug does not exist', async () => {
+    const seriesBuilder = makeChainable({ data: null, error: null });
+    mockFrom.mockReturnValueOnce(seriesBuilder);
+
+    await expect(getBySeriesSlug('nonexistent', 1, 20)).rejects.toThrow(NotFoundError);
+  });
+
+  it('throws DatabaseError when the series query fails', async () => {
+    const seriesBuilder = makeChainable({
+      data: null,
+      error: { message: 'DB down' },
+    });
+    mockFrom.mockReturnValueOnce(seriesBuilder);
+
+    await expect(getBySeriesSlug('wpa-posters', 1, 20)).rejects.toThrow(DatabaseError);
+  });
+
+  it('throws DatabaseError when the posters query fails', async () => {
+    const seriesBuilder = makeChainable({ data: MOCK_SERIES, error: null });
+    const postersBuilder = makePaginatedChainable({
+      data: null,
+      count: null,
+      error: { message: 'query timeout' },
+    });
+    mockFrom.mockReturnValueOnce(seriesBuilder).mockReturnValueOnce(postersBuilder);
+
+    await expect(getBySeriesSlug('wpa-posters', 1, 20)).rejects.toThrow(DatabaseError);
+  });
+});
+
+// ─── getVisualSiblings ────────────────────────────────────────────────────────
+
+describe('getVisualSiblings', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns siblings from the RPC', async () => {
+    const siblings: VisualSibling[] = [
+      { id: 's1', nara_id: 'nara-s1', title: 'Sibling 1', thumbnail_url: 'u1', similarity_score: 0.95 },
+      { id: 's2', nara_id: 'nara-s2', title: 'Sibling 2', thumbnail_url: 'u2', similarity_score: 0.88 },
+    ];
+    mockRpc.mockResolvedValueOnce({ data: siblings, error: null });
+
+    const result = await getVisualSiblings('poster-uuid');
+
+    expect(result).toEqual(siblings);
+    expect(mockRpc).toHaveBeenCalledWith('get_visual_siblings', {
+      source_poster_id: 'poster-uuid',
+      sibling_count: 5,
+    });
+  });
+
+  it('returns an empty array when the RPC returns null data', async () => {
+    mockRpc.mockResolvedValueOnce({ data: null, error: null });
+
+    const result = await getVisualSiblings('poster-uuid');
+
+    expect(result).toEqual([]);
+  });
+
+  it('throws DatabaseError when the RPC fails', async () => {
+    mockRpc.mockResolvedValueOnce({ data: null, error: { message: 'RPC error' } });
+
+    await expect(getVisualSiblings('poster-uuid')).rejects.toThrow(DatabaseError);
   });
 });
