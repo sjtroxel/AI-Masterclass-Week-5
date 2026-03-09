@@ -105,7 +105,7 @@ async function normalizeToBase64(imageUrl: string): Promise<string> {
 function extractRetryAfter(err: unknown): number | null {
   if (!(err instanceof Error)) return null;
   const match = err.message.match(/"retry_after"\s*:\s*(\d+(?:\.\d+)?)/);
-  return match ? Math.ceil(parseFloat(match[1])) : null;
+  return match ? Math.ceil(parseFloat(match[1] ?? '0')) : null;
 }
 
 async function runClipModel(
