@@ -1,10 +1,13 @@
+import logoSrc from '../images/PosterPilotLogo.png';
+
 export default function AboutPage() {
   return (
     <main className="min-h-screen bg-surface px-4 py-12 md:px-8">
       <div className="mx-auto max-w-3xl flex flex-col gap-10">
 
         {/* Page heading */}
-        <header>
+        <header className="flex items-center gap-4">
+          <img src={logoSrc} alt="" aria-hidden="true" className="h-14 w-auto" />
           <h1 className="font-serif text-3xl font-semibold text-text">
             About Poster Pilot
           </h1>

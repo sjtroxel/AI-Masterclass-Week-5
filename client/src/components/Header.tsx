@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { debug } from '../lib/debug.js';
+import logoSrc from '../images/PosterPilotLogo.png';
 
 // ─── Dark mode helpers ────────────────────────────────────────────────────────
 
@@ -48,10 +49,11 @@ export default function Header() {
       {/* Wordmark */}
       <Link
         to="/"
-        className="font-serif text-2xl font-bold text-text no-underline"
+        className="flex items-center gap-3 no-underline"
         aria-label="Poster Pilot — home"
       >
-        Poster Pilot
+        <img src={logoSrc} alt="" aria-hidden="true" className="h-9 w-auto" />
+        <span className="font-serif text-2xl font-bold text-text">Poster Pilot</span>
       </Link>
 
       {/* Placeholder for Search Bar (Phase 7) */}
