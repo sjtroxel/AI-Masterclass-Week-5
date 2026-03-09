@@ -1,5 +1,7 @@
 # Phase 7 — Search UI
 
+**Status**: ✅ Complete — 197 tests passing (3 new: `getConfidenceColor` unit tests), typecheck + lint clean.
+
 **Depends on**:
 - [Phase 4 — Search API](./phase-4-search-api.md) (real search results to render)
 - [Phase 6 — Frontend Shell](./phase-6-frontend-shell.md) (design tokens, API client, routing)
@@ -105,9 +107,33 @@ Unit tests — `client/src/__tests__/ConfidenceIndicator.test.ts`:
 
 ---
 
+## Implementation Notes
+
+- **No Lucide-React** — Icons are inline SVGs (same pattern as `Header.tsx`). No new dependency added.
+- **`SimilarityBadge` is not a separate component** — The spec names `ConfidenceIndicator` as the
+  reusable component (7.1). The per-card badge is just `<ConfidenceIndicator>` rendered inside
+  `PosterCard` when `similarityScore` is defined.
+- **`getConfidenceColor` exported from `ConfidenceIndicator.tsx`** — Pure function extracted for
+  unit testing without a DOM; tests live in `client/src/__tests__/ConfidenceIndicator.test.ts`.
+- **`--confidence-color` CSS custom property** — Set inline on `<progress>` to drive fill color
+  cross-browser. Styles for `progress::-webkit-progress-value` etc. live in `index.css`.
+- **`exactOptionalPropertyTypes`** — The `SearchRequest` build in `useSearch` uses conditional
+  object spread (`...(condition ? { key: val } : {})`) to avoid passing explicit `undefined`
+  for optional keys.
+- **Debounce placement** — `SearchBar` debounces the *button click* at 300ms (spec: "Debounce:
+  300ms, `useRef` timeout"). `Enter` key fires immediately (`fireSubmitNow`) to feel responsive.
+- **`loadMore` strategy** — Increments `limit` by 20 and re-fetches; the server returns the full
+  larger result set. `hasMore = results.length >= limit` guards the button visibility.
+
+---
+
 ## Testing Checkpoint
 
-- Manual E2E walkthrough:
+- ✅ `npm test` — 197 tests (3 new `getConfidenceColor` unit tests passing)
+- ✅ `npm run typecheck` — clean across all workspaces
+- ✅ `npm run lint` — clean
+
+Manual E2E walkthrough:
   - Type a query → results appear → confidence badge colors are correct
   - Type a nonsense query → `handoffNeeded: true` → HandoffBanner appears
   - Click "Request Expert Review" → `mailto:` link opens with pre-filled content

@@ -73,3 +73,32 @@ html {
   color: var(--color-text);
   font-family: var(--font-sans);
 }
+
+/* === <progress> element — ConfidenceIndicator === */
+/* Reset browser default appearance so we can style it consistently */
+progress {
+  appearance: none;
+  -webkit-appearance: none;
+  border: none;
+  border-radius: var(--radius-button);
+  height: 0.375rem;
+  width: 100%;
+  background-color: var(--color-surface-3);
+}
+
+progress::-webkit-progress-bar {
+  background-color: var(--color-surface-3);
+  border-radius: var(--radius-button);
+}
+
+/* The fill color is driven by --confidence-color set inline on the element */
+progress::-webkit-progress-value {
+  background-color: var(--confidence-color, var(--color-primary-500));
+  border-radius: var(--radius-button);
+  transition: width 0.3s ease;
+}
+
+progress::-moz-progress-bar {
+  background-color: var(--confidence-color, var(--color-primary-500));
+  border-radius: var(--radius-button);
+}

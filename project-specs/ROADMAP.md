@@ -220,7 +220,7 @@ These apply at every phase. A code review that finds any of these is a blocker �
 | 4 | Search API | Phase 3 | ✅ | All 4 modes return typed results; handoff works |
 | 5 | Archivist API | Phase 4 | ✅ | SSE streams; session persists; budget enforced |
 | 6 | Frontend Shell | Phase 2 | ✅ | App loads; dark mode; API client typed |
-| 7 | Search UI | Phases 4 + 6 | ⬜ | Full search flow; Red Button works; responsive |
+| 7 | Search UI | Phases 4 + 6 | ✅ | Full search flow; Red Button works; responsive |
 | 8 | Detail Pages | Phases 4 + 7 | ⬜ | All routes; Visual Siblings; NARA links |
 | 9 | Archivist UI | Phases 5 + 8 | ⬜ | Streaming; citations; pre-seed from siblings |
 | 10 | Hardening | Phase 9 | ⬜ | ≥80% coverage; E2E passes; live in production |
