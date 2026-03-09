@@ -185,6 +185,20 @@ export type SeriesPageResponse = {
   limit: number;
 };
 
+export type ArchivistSession = {
+  id: string;
+  session_id: string;
+  messages: ChatMessage[];
+  poster_context: string[];           // UUID[] — poster IDs currently in context
+  turn_count: number;
+  total_tokens: number;               // cumulative token usage for budget tracking
+  archivist_expressed_uncertainty: boolean;
+  handoff_prompted_at: string | null; // ISO8601 or null
+  created_at: string;
+  updated_at: string;
+  expires_at: string;
+};
+
 // ─── API Envelope ─────────────────────────────────────────────────────────────
 
 export type HealthResponse = {
