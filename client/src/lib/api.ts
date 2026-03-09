@@ -1,4 +1,5 @@
 import type {
+  Citation,
   Poster,
   SearchRequest,
   SearchResponse,
@@ -20,11 +21,32 @@ export type ChatParams = {
   poster_similarity_scores?: Record<string, number>;
 };
 
+/** Payload delivered to `onDone` when the Archivist stream completes. */
+export type DonePayload = {
+  citations: Citation[];
+  confidence: number;
+};
+
 export type ChatCallbacks = {
-  onToken: (token: string) => void;
-  onDone: () => void;
+  onToken: (delta: string) => void;
+  onDone: (payload: DonePayload) => void;
   onError: (err: Error) => void;
 };
+
+/**
+ * Error class for SSE-level errors from /api/chat.
+ * Carries an optional `code` string so callers can detect SESSION_EXPIRED
+ * and perform silent session recovery (spec 9.6).
+ */
+export class ApiStreamError extends Error {
+  constructor(
+    message: string,
+    public readonly code?: string,
+  ) {
+    super(message);
+    this.name = 'ApiStreamError';
+  }
+}
 
 // ─── Internal fetch helper ────────────────────────────────────────────────────
 
@@ -42,7 +64,12 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error(`API ${res.status}: ${text}`);
   }
 
-  return res.json() as Promise<T>;
+  const json = await res.json() as unknown;
+  // All Express routes wrap their payload in { data: T } per backend.md convention.
+  if (json !== null && typeof json === 'object' && 'data' in (json as Record<string, unknown>)) {
+    return (json as { data: T }).data;
+  }
+  return json as T;
 }
 
 // ─── Search ───────────────────────────────────────────────────────────────────
@@ -126,19 +153,34 @@ export function chat(params: ChatParams, callbacks: ChatCallbacks): { close: () 
           for (const line of frame.split('\n')) {
             if (line.startsWith('data: ')) {
               const payload = line.slice(6).trim();
+              // Legacy sentinel — kept for forward-compat; our server sends { done: true }
               if (payload === '[DONE]') {
-                callbacks.onDone();
+                callbacks.onDone({ citations: [], confidence: 0 });
                 return;
               }
               try {
                 const parsed = JSON.parse(payload) as unknown;
-                if (
-                  parsed !== null &&
-                  typeof parsed === 'object' &&
-                  'token' in parsed &&
-                  typeof (parsed as Record<string, unknown>).token === 'string'
-                ) {
-                  callbacks.onToken((parsed as { token: string }).token);
+                if (parsed !== null && typeof parsed === 'object') {
+                  const obj = parsed as Record<string, unknown>;
+                  if ('delta' in obj && typeof obj.delta === 'string') {
+                    // Streaming token from the Archivist
+                    callbacks.onToken(obj.delta);
+                  } else if (obj.done === true) {
+                    // Final event — carries citations and confidence score
+                    const citations = Array.isArray(obj.citations)
+                      ? (obj.citations as Citation[])
+                      : [];
+                    const confidence =
+                      typeof obj.confidence === 'number' ? obj.confidence : 0;
+                    callbacks.onDone({ citations, confidence });
+                    return;
+                  } else if ('error' in obj && typeof obj.error === 'string') {
+                    // Server-side error propagated over the SSE stream
+                    const code =
+                      typeof obj.code === 'string' ? obj.code : undefined;
+                    callbacks.onError(new ApiStreamError(obj.error, code));
+                    return;
+                  }
                 }
               } catch {
                 debug('SSE parse error — skipping frame', payload);
@@ -148,7 +190,7 @@ export function chat(params: ChatParams, callbacks: ChatCallbacks): { close: () 
         }
       }
 
-      callbacks.onDone();
+      callbacks.onDone({ citations: [], confidence: 0 });
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === 'AbortError') {
         debug('chat stream aborted');

@@ -211,13 +211,15 @@ describe('expandVibeQuery', () => {
     await expect(expandVibeQuery('minimalist')).rejects.toThrow(AIServiceError);
   });
 
-  it('throws AIServiceError when the array has more than 5 items', async () => {
-    const tooMany = ['a', 'b', 'c', 'd', 'e', 'f'];
+  it('truncates to MAX_VIBE_EXPANSIONS when the model returns more than 5 items', async () => {
+    const tooMany = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
     mockCreate.mockResolvedValue({
       content: [{ type: 'text', text: JSON.stringify(tooMany) }],
     });
 
-    await expect(expandVibeQuery('maximalist')).rejects.toThrow(AIServiceError);
+    const result = await expandVibeQuery('maximalist');
+    expect(result).toHaveLength(5);
+    expect(result).toEqual(['a', 'b', 'c', 'd', 'e']);
   });
 
   it('throws AIServiceError when the model returns a non-array JSON value', async () => {

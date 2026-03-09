@@ -3,9 +3,10 @@ import type { Response, NextFunction } from 'express';
 import { supabase } from '../lib/supabase.js';
 import { config } from '../lib/config.js';
 import {
-  ValidationError,
+  AppError,
   AIServiceError,
   DatabaseError,
+  SessionExpiredError,
 } from '../middleware/errorHandler.js';
 import type { Citation, ChatMessage, ArchivistSession } from '@poster-pilot/shared';
 
@@ -180,9 +181,7 @@ export async function loadSession(sessionId: string): Promise<ArchivistSession> 
   if (!data) return emptySession(sessionId);
 
   if (new Date((data as ArchivistSession).expires_at) < new Date()) {
-    throw new ValidationError(
-      'Session has expired. Your conversation history has been cleared. Please start a new conversation.',
-    );
+    throw new SessionExpiredError();
   }
 
   return data as ArchivistSession;
@@ -399,8 +398,12 @@ export async function streamResponse(
   } catch (err) {
     // If headers were already sent (mid-stream error), emit an SSE error event
     // before handing off to the global error handler for server-side logging.
+    // Include the error code so the client can distinguish SESSION_EXPIRED from
+    // other failures and silently recover (spec 9.6).
     if (res.headersSent) {
-      res.write(`data: ${JSON.stringify({ error: 'Stream interrupted unexpectedly' })}\n\n`);
+      const code = err instanceof AppError ? err.code : 'STREAM_ERROR';
+      const message = err instanceof AppError ? err.message : 'Stream interrupted unexpectedly';
+      res.write(`data: ${JSON.stringify({ error: message, code })}\n\n`);
       res.end();
     }
     next(err);

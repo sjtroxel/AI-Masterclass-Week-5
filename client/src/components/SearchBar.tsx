@@ -145,7 +145,7 @@ export default function SearchBar({
       </div>
 
       {/* Search input row */}
-      <div className="relative flex items-center">
+      <div className="relative flex items-center gap-2">
         {/* Loading shimmer overlay */}
         {loading && (
           <div
@@ -166,7 +166,7 @@ export default function SearchBar({
           placeholder={placeholder}
           disabled={loading}
           className="
-            flex-1 rounded-l-card border border-r-0 border-border bg-surface-2
+            flex-1 rounded-card border border-border bg-surface-2
             px-4 py-3 font-sans text-sm text-text placeholder:text-text-muted
             focus:border-primary-500 focus:outline-none
             disabled:opacity-60
@@ -179,7 +179,7 @@ export default function SearchBar({
           disabled={loading || (mode !== 'image' && !query.trim())}
           aria-label="Submit search"
           className="
-            rounded-r-card border border-border bg-primary-500 px-5 py-3
+            rounded-card border border-border bg-primary-500 px-5 py-3
             text-surface transition-colors hover:bg-primary-600
             disabled:cursor-not-allowed disabled:opacity-50
             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500

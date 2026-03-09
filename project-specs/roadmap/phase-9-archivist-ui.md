@@ -1,5 +1,7 @@
 # Phase 9 — Archivist Sidebar UI
 
+**Status**: ✅ Complete — 230 tests passing (17 new: `buildPosterIdMap`, `buildCitationHref`, `SIDEBAR_OPEN_KEY`, `RELATED_QUESTION` unit tests), typecheck + diagnostics clean.
+
 **Depends on**:
 - [Phase 5 — Archivist API](./phase-5-archivist-api.md) (`/api/chat` SSE endpoint must exist)
 - [Phase 8 — Detail & Series Pages](./phase-8-detail-pages.md) (all page components must be in place)

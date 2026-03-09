@@ -37,6 +37,16 @@ export class DatabaseError extends AppError {
   }
 }
 
+export class SessionExpiredError extends AppError {
+  constructor() {
+    super(
+      400,
+      'SESSION_EXPIRED',
+      'Session has expired. Your conversation history has been cleared. Please start a new conversation.',
+    );
+  }
+}
+
 // ─── Global Error Handler ─────────────────────────────────────────────────────
 // Must be registered as the LAST middleware in index.ts (4-arg signature is required).
 

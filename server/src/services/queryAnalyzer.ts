@@ -188,18 +188,22 @@ export async function expandVibeQuery(query: string): Promise<string[]> {
 
   if (
     !Array.isArray(parsed) ||
-    parsed.length < MIN_VIBE_EXPANSIONS ||
-    parsed.length > MAX_VIBE_EXPANSIONS ||
     !parsed.every((item): item is string => typeof item === 'string' && item.length > 0)
   ) {
     const detail = Array.isArray(parsed)
       ? `${parsed.length} items`
       : `unexpected type: ${typeof parsed}`;
     throw new AIServiceError(
-      `Vibe expansion returned an invalid array (expected ${MIN_VIBE_EXPANSIONS}–${MAX_VIBE_EXPANSIONS} ` +
-        `non-empty strings, got ${detail})`,
+      `Vibe expansion returned an invalid array (expected non-empty strings, got ${detail})`,
     );
   }
 
-  return parsed;
+  if (parsed.length < MIN_VIBE_EXPANSIONS) {
+    throw new AIServiceError(
+      `Vibe expansion returned too few phrases (minimum ${MIN_VIBE_EXPANSIONS}, got ${parsed.length})`,
+    );
+  }
+
+  // Model sometimes returns more than asked — take the first MAX_VIBE_EXPANSIONS.
+  return parsed.slice(0, MAX_VIBE_EXPANSIONS);
 }

@@ -3,6 +3,15 @@
 /** Minimum similarity score before Human Handoff (The Red Button) is triggered. */
 export const HUMAN_HANDOFF_THRESHOLD = 0.72;
 
+/**
+ * Minimum cosine similarity passed to match_posters as the RPC filter floor.
+ * CLIP text-to-image similarity typically ranges 0.15–0.35 for relevant matches;
+ * 0.72 is appropriate only for image-to-image similarity. This lower floor lets
+ * text/vibe/hybrid searches return results while the handoff logic (0.72) still
+ * flags low-confidence results with The Red Button.
+ */
+export const CLIP_SEARCH_FLOOR = 0.10;
+
 /** Similarity score at or above which results are shown without any qualifier. */
 export const HIGH_CONFIDENCE_THRESHOLD = 0.85;
 

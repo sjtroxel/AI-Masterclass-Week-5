@@ -119,17 +119,16 @@ export default function VisualSiblings({ sourcePosterId, onHowRelated }: VisualS
               {formatSimilarityPct(sibling.similarity_score)}
             </p>
 
-            {/* Phase 9 hook — disabled until Archivist sidebar is wired */}
+            {/* Archivist integration — opens sidebar with a pre-seeded question */}
             <button
               type="button"
-              disabled
               onClick={() => onHowRelated([sourcePosterId, sibling.id])}
               aria-label={`Ask the Archivist how "${sibling.title}" is related`}
-              title="Coming in Phase 9 — connects to The Archivist"
               className="
                 w-full rounded-button border border-border bg-surface-2
                 px-2 py-1.5 font-sans text-xs text-text-muted
-                disabled:cursor-not-allowed disabled:opacity-50
+                transition-colors hover:bg-surface-3 hover:text-text
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500
               "
             >
               How are these related?

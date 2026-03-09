@@ -7,6 +7,7 @@ import { DatabaseError } from '../middleware/errorHandler.js';
 import {
   HUMAN_HANDOFF_THRESHOLD,
   HIGH_CONFIDENCE_THRESHOLD,
+  CLIP_SEARCH_FLOOR,
 } from '@poster-pilot/shared';
 import type {
   SearchResponse,
@@ -93,7 +94,7 @@ async function runMatchPosters(
 
   const { data, error } = await supabase.rpc('match_posters', {
     query_embedding: embedding,
-    match_threshold: HUMAN_HANDOFF_THRESHOLD,
+    match_threshold: CLIP_SEARCH_FLOOR,
     match_count: ctx.limit ?? DEFAULT_MATCH_COUNT,
     series_filter: ctx.seriesFilter ?? null,
   });

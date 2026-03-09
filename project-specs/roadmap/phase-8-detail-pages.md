@@ -1,5 +1,7 @@
 # Phase 8 — Poster Detail & Series Pages
 
+**Status**: ✅ Complete — 213 tests passing (16 new: `formatSimilarityPct`, `buildNaraUrl`, `formatBreadcrumb` unit tests), typecheck + diagnostics clean.
+
 **Depends on**:
 - [Phase 4 — Search API](./phase-4-search-api.md) (poster detail and siblings endpoints)
 - [Phase 7 — Search UI](./phase-7-search-ui.md) (`PosterCard` and `ConfidenceIndicator` already built)
@@ -12,7 +14,7 @@
 
 - `PosterDetailPage` displays all metadata fields from the `posters` table
 - The Visual Siblings horizontal scroll strip shows 5 posters with similarity percentages
-- "How are these related?" button placeholder is wired (will be connected in Phase 9)
+- "How are these related?" button wired to the Archivist sidebar (Phase 9)
 - `SeriesPage` displays a paginated browse grid for a single series
 - `AboutPage` is complete with NARA attribution
 - "← Back" breadcrumb navigation returns to the previous search results

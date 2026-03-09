@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import type { Poster } from '@poster-pilot/shared';
 import * as api from '../lib/api.js';
 import { debug } from '../lib/debug.js';
+import { useArchivistContext } from '../lib/archivistContext.js';
 import ConfidenceIndicator from '../components/ConfidenceIndicator.js';
 import VisualSiblings from '../components/VisualSiblings.js';
 import ErrorState from '../components/ErrorState.js';
@@ -34,6 +35,8 @@ export default function PosterDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
+  const { openSidebar, sendMessage, setPosterContext } = useArchivistContext();
+
   const [poster, setPoster] = useState<Poster | null>(null);
   const [fetchState, setFetchState] = useState<FetchState>('loading');
   const [errorMsg, setErrorMsg] = useState<string>('');
@@ -63,6 +66,18 @@ export default function PosterDetailPage() {
 
     return () => { cancelled = true; };
   }, [id, retryCount]);
+
+  // Sync this poster into the Archivist's context so the sidebar can reference it
+  useEffect(() => {
+    if (!poster) return;
+    setPosterContext([poster.id], { [poster.nara_id]: poster.id });
+  }, [poster, setPosterContext]);
+
+  // "How are these related?" — opens sidebar and sends the pre-seeded question
+  const handleHowRelated = useCallback((posterIds: string[]): void => {
+    openSidebar();
+    sendMessage('How are these two posters related?', posterIds);
+  }, [openSidebar, sendMessage]);
 
   // ─── Loading skeleton ──────────────────────────────────────────────────────
 
@@ -267,9 +282,7 @@ export default function PosterDetailPage() {
         {/* Full-width Visual Siblings strip */}
         <VisualSiblings
           sourcePosterId={poster.id}
-          onHowRelated={(_ids) => {
-            // Phase 9: wire to Archivist sidebar
-          }}
+          onHowRelated={handleHowRelated}
         />
 
       </div>

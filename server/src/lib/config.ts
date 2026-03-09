@@ -22,7 +22,20 @@ const envSchema = z
     REPLICATE_API_KEY: z.string().min(1),
     CLIP_MODEL_VERSION: z.string().min(1),
     PORT: z.coerce.number().int().positive().default(3001),
-    CLIENT_ORIGIN: z.string().url(),
+    // Accepts a single URL or a comma-separated list of URLs.
+    // Example: "http://localhost:5173,http://localhost:5175"
+    CLIENT_ORIGIN: z
+      .string()
+      .min(1)
+      .transform((val) => {
+        const origins = val.split(',').map((s) => s.trim()).filter(Boolean);
+        for (const origin of origins) {
+          try { new URL(origin); } catch {
+            throw new Error(`Invalid URL in CLIENT_ORIGIN: "${origin}"`);
+          }
+        }
+        return origins;
+      }),
   })
   .transform((env) => ({
     anthropicApiKey: env.ANTHROPIC_API_KEY,
@@ -34,7 +47,7 @@ const envSchema = z
     replicateApiKey: env.REPLICATE_API_KEY,
     clipModelVersion: env.CLIP_MODEL_VERSION,
     port: env.PORT,
-    clientOrigin: env.CLIENT_ORIGIN,
+    clientOrigins: env.CLIENT_ORIGIN, // string[]
   }));
 
 const result = envSchema.safeParse(process.env);

@@ -114,7 +114,7 @@ React Client (ArchivistSidebar component)
 Express Route (server/routes/chat.ts)
       ▼
 archivistService.ts
-      │  (1) Load session from archivist_sessions — ValidationError if expired
+      │  (1) Load session from archivist_sessions — SessionExpiredError (code: SESSION_EXPIRED) if expired
       │  (2) Fetch metadata for poster_context_ids from posters table (no embedding column)
       │  (3) Build XML context block (nara_id, title, date, creator, description,
       │       subject_tags, physical_description, overall_confidence, similarity_score)
@@ -133,6 +133,20 @@ Express Response (streamed via Server-Sent Events)
       ▼
 React Client (streams into ArchivistMessage component)
 ```
+
+### Client-Side Archivist Architecture (Phase 9)
+
+The client-side Archivist is built as three cooperating layers:
+
+| Layer | File | Responsibility |
+|-------|------|---------------|
+| Hook | `hooks/useArchivist.ts` | Session ID (`sessionStorage`), streaming state machine, `ApiStreamError` detection, session-expiry recovery (spec 9.6) |
+| Context | `lib/archivistContext.tsx` | Sidebar open/closed (`localStorage`), poster context map (nara_id → UUID) set by pages, forwards `sendMessage` to the hook |
+| Sidebar | `components/ArchivistSidebar.tsx` | Fixed right panel (desktop `w-96`) / full-screen drawer (mobile), always-visible tab toggle, `aria-live` message list, `Enter`-to-send textarea |
+
+**Session recovery (spec 9.6)**: If the SSE stream returns `{ error, code: 'SESSION_EXPIRED' }`, the hook silently generates a new `crypto.randomUUID()`, writes it to `sessionStorage`, and retries the message once. If the retry also fails, the error is surfaced in the UI.
+
+**Poster context flow**: Each page calls `setPosterContext(ids, naraIdMap)` when its data loads. This propagates nara_id → UUID lookups into `ArchivistMessage` for citation link resolution. If a cited `nara_id` is not in the map, the link falls back to `/search?q={nara_id}&mode=text`.
 
 ---
 

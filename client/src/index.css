@@ -3,7 +3,7 @@
 @theme {
   /* === Typography === */
   --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
-  --font-serif: 'Playfair Display Variable', Georgia, serif;
+  --font-serif: 'Fraunces Variable', Georgia, serif;
   --font-mono: 'JetBrains Mono Variable', 'Fira Code', monospace;
 
   /* === Color Palette — Light Mode === */
@@ -51,16 +51,15 @@
 }
 
 /* === Dark Mode Overrides === */
-@variant dark {
-  @theme {
-    --color-surface:     oklch(12% 0.010 250);  /* near-black with cool undertone */
-    --color-surface-2:   oklch(17% 0.012 250);
-    --color-surface-3:   oklch(22% 0.014 250);
-    --color-border:      oklch(30% 0.015 250);
-    --color-text:        oklch(93% 0.005 75);
-    --color-text-muted:  oklch(65% 0.008 75);
-    /* Primary and accent remain — they're identity colors */
-  }
+/* Applied via .dark class on <html> by Header.tsx — not media query based. */
+.dark {
+  --color-surface:     oklch(12% 0.010 250);  /* near-black with cool undertone */
+  --color-surface-2:   oklch(17% 0.012 250);
+  --color-surface-3:   oklch(22% 0.014 250);
+  --color-border:      oklch(30% 0.015 250);
+  --color-text:        oklch(93% 0.005 75);
+  --color-text-muted:  oklch(65% 0.008 75);
+  /* Primary and accent remain — they're identity colors */
 }
 
 /* === Base Styles === */

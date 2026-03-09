@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Mock } from 'vitest';
 import type { Response } from 'express';
-import { ValidationError, AIServiceError, DatabaseError } from '../../middleware/errorHandler.js';
+import { AIServiceError, DatabaseError, SessionExpiredError } from '../../middleware/errorHandler.js';
 
 // ─── Hoisted mocks ────────────────────────────────────────────────────────────
 
@@ -281,7 +281,7 @@ describe('loadSession', () => {
       }),
     });
 
-    await expect(loadSession(SESSION_ID)).rejects.toThrow(ValidationError);
+    await expect(loadSession(SESSION_ID)).rejects.toThrow(SessionExpiredError);
   });
 
   it('throws DatabaseError on Supabase failure', async () => {
@@ -580,9 +580,9 @@ describe('streamResponse', () => {
       next,
     );
 
-    // loadSession throws ValidationError before headers are sent → just call next(err)
+    // loadSession throws SessionExpiredError before headers are sent → just call next(err)
     expect(next).toHaveBeenCalledOnce();
-    expect(next.mock.calls[0]?.[0]).toBeInstanceOf(ValidationError);
+    expect(next.mock.calls[0]?.[0]).toBeInstanceOf(SessionExpiredError);
     expect(res.write).not.toHaveBeenCalled();
   });
 });

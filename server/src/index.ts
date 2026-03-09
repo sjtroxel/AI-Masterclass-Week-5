@@ -17,7 +17,7 @@ const app = express();
 
 // ── Security middleware — strict order per security.md ────────────────────────
 app.use(helmet());
-app.use(cors({ origin: config.clientOrigin }));
+app.use(cors({ origin: config.clientOrigins }));
 // Raise body limit for the search route BEFORE the global parser so the global
 // 1 MB cap never applies to image payloads (base64 5 MB image ≈ 7 MB string).
 // body-parser skips re-parsing when req.body is already set, so the global
@@ -76,5 +76,5 @@ app.listen(config.port, () => {
   // eslint-disable-next-line no-console
   console.log(`[server] Running on http://localhost:${config.port}`);
   // eslint-disable-next-line no-console
-  console.log(`[server] CORS origin: ${config.clientOrigin}`);
+  console.log(`[server] CORS origins: ${config.clientOrigins.join(', ')}`);
 });

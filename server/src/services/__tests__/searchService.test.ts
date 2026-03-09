@@ -123,7 +123,7 @@ describe('textSearch', () => {
 
     expect(mockRpc).toHaveBeenCalledWith('match_posters', {
       query_embedding: MOCK_EMBEDDING,
-      match_threshold: 0.72,
+      match_threshold: 0.1,
       match_count: 10,
       series_filter: 'wpa-posters',
     });

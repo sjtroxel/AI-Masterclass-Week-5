@@ -4,7 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 
 // Variable font CSS — must be imported here so Vite bundles the font files
 import '@fontsource-variable/inter';
-import '@fontsource-variable/playfair-display';
+import '@fontsource-variable/fraunces';
 import '@fontsource-variable/jetbrains-mono';
 
 import './index.css';
