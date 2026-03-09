@@ -92,31 +92,31 @@ built in parallel once Phase 4 is complete — they have no dependency on each o
 
 ---
 
-### Phase 4 — Search API
+### Phase 4 — Search API ✅
 **File**: [`roadmap/phase-4-search-api.md`](./roadmap/phase-4-search-api.md)
 **Depends on**: Phase 3 (real poster data required for meaningful testing)
 
 **Definition of Done**:
-- `POST /api/search` works for all 4 modes: `text`, `image`, `hybrid`, `vibe`
-- Every result has `similarity_score`; `handoff_needed: true` when any score < 0.72
-- Every search is logged to `poster_search_events` (async, non-blocking)
-- `GET /api/posters/:id` and siblings endpoints return correct typed responses
-- All input is Zod-validated; oversized queries/images rejected with 400
+- ✅ `POST /api/search` works for all 4 modes: `text`, `image`, `hybrid`, `vibe`
+- ✅ Every result has `similarity_score`; `handoff_needed: true` when any score < 0.72
+- ✅ Every search is logged to `poster_search_events` (async, non-blocking)
+- ✅ `GET /api/posters/:id` and siblings endpoints return correct typed responses
+- ✅ All input is Zod-validated; oversized queries/images rejected with 400
 
 ---
 
-### Phase 5 — Archivist (RAG) API
+### Phase 5 — Archivist (RAG) API ✅
 **File**: [`roadmap/phase-5-archivist-api.md`](./roadmap/phase-5-archivist-api.md)
 **Depends on**: Phase 4
 **Parallel with**: Phase 6 (no cross-dependency)
 
 **Definition of Done**:
-- `POST /api/chat` streams via SSE; delta events and a final `done` event
-- Session history loaded from and persisted to `archivist_sessions`
-- Context block limited to 5 posters; `embedding` column never fetched
-- Token budget enforced at < 8,000; history compressed (not truncated) when needed
-- Confidence clause appended to system prompt when `similarity_score < 0.72`
-- Model called with exactly `temperature: 0.2`, `max_tokens: 900`
+- ✅ `POST /api/chat` streams via SSE; delta events and a final `done` event
+- ✅ Session history loaded from and persisted to `archivist_sessions`
+- ✅ Context block limited to 5 posters; `embedding` column never fetched
+- ✅ Token budget enforced at < 8,000; history compressed (not truncated) when needed
+- ✅ Confidence clause appended to system prompt when `similarity_score < 0.72`
+- ✅ Model called with exactly `temperature: 0.2`, `max_tokens: 900`
 
 ---
 
@@ -211,16 +211,16 @@ These apply at every phase. A code review that finds any of these is a blocker �
 
 ## Phase Gate Summary
 
-| Phase | Name | Key Dependency | DoD Signal |
-|-------|------|---------------|------------|
-| 0 | Foundation | — | CI green; pre-commit hooks fire |
-| 1 | Database | Phase 0 | All tables + RLS verified in Supabase |
-| 2 | Server Skeleton | Phase 1 | Health check hits DB; error handler tested |
-| 3 | Ingestion | Phase 2 | Real poster rows with confidence scores in Supabase |
-| 4 | Search API | Phase 3 | All 4 modes return typed results; handoff works |
-| 5 | Archivist API | Phase 4 | SSE streams; session persists; budget enforced |
-| 6 | Frontend Shell | Phase 2 | App loads; dark mode; API client typed |
-| 7 | Search UI | Phases 4 + 6 | Full search flow; Red Button works; responsive |
-| 8 | Detail Pages | Phases 4 + 7 | All routes; Visual Siblings; NARA links |
-| 9 | Archivist UI | Phases 5 + 8 | Streaming; citations; pre-seed from siblings |
-| 10 | Hardening | Phase 9 | ≥80% coverage; E2E passes; live in production |
+| Phase | Name | Key Dependency | Status | DoD Signal |
+|-------|------|---------------|--------|------------|
+| 0 | Foundation | — | ✅ | CI green; pre-commit hooks fire |
+| 1 | Database | Phase 0 | ✅ | All tables + RLS verified in Supabase |
+| 2 | Server Skeleton | Phase 1 | ✅ | Health check hits DB; error handler tested |
+| 3 | Ingestion | Phase 2 | ✅ | Real poster rows with confidence scores in Supabase |
+| 4 | Search API | Phase 3 | ✅ | All 4 modes return typed results; handoff works |
+| 5 | Archivist API | Phase 4 | ✅ | SSE streams; session persists; budget enforced |
+| 6 | Frontend Shell | Phase 2 | ✅ | App loads; dark mode; API client typed |
+| 7 | Search UI | Phases 4 + 6 | ⬜ | Full search flow; Red Button works; responsive |
+| 8 | Detail Pages | Phases 4 + 7 | ⬜ | All routes; Visual Siblings; NARA links |
+| 9 | Archivist UI | Phases 5 + 8 | ⬜ | Streaming; citations; pre-seed from siblings |
+| 10 | Hardening | Phase 9 | ⬜ | ≥80% coverage; E2E passes; live in production |

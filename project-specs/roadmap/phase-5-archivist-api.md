@@ -1,5 +1,7 @@
 # Phase 5 — Archivist (RAG) API
 
+**Status**: ✅ Complete — 194 tests passing (29 new in this phase), typecheck clean.
+
 **Depends on**: [Phase 4 — Search API](./phase-4-search-api.md)
   (the Archivist fetches poster metadata from the same data layer)
 **Next phase**: [Phase 9 — Archivist Sidebar UI](./phase-9-archivist-ui.md)
@@ -81,26 +83,37 @@
 - Returns `{ nara_id: string, field: string, value: string }[]`
 - Gracefully returns `[]` if no citations found
 
-Unit tests — `server/__tests__/archivistService.test.ts` (all mocked):
+Unit tests — `server/services/__tests__/archivistService.test.ts` (all mocked):
 - Zero citations in text → returns `[]`
 - One citation → returns single-item array with correct `nara_id`
 - Multiple citations → returns array with no duplicates
 
 ### 5.7 — Integration tests for Archivist (all mocked)
-- Test: session is created on first call, persisted, and loaded correctly on the second call
-- Test: history compression fires when the estimated token budget approaches 8,000
-- Test: the confidence clause is present in the system prompt when any poster has `similarity_score < 0.72`
-- Test: `temperature: 0.2` and `max_tokens: 900` are always passed to the Anthropic SDK (assert on mock call args)
-- Test: expired session throws `ValidationError`
+- Test: session is created on first call, persisted via upsert with `turn_count: 1`
+- Test: history compression fires when estimated token budget approaches 8,000
+- Test: confidence clause is present in system prompt when any poster has `similarity_score < 0.72`
+- Test: `temperature: 0.2` and `max_tokens: 900` are always passed to the Anthropic SDK (asserted on mock call args)
+- Test: expired session throws `ValidationError` without writing any SSE events
+- Test: mid-stream error (after headers flushed) emits an SSE error event and calls `next(err)`
+
+**Implementation notes**:
+- `buildContextBlock` accepts an optional `similarityScores: Record<string, number>` param
+  (not in original spec but required for the XML template's `similarity_score` attribute).
+- `compressHistory` stores the summary as `role: 'user'` to satisfy the Anthropic API's
+  requirement that message arrays start with 'user'. If the stored first message is 'assistant',
+  `streamResponse` prepends a synthetic `'[Continuing our conversation]'` user message.
+- Citation extraction scans response text for `nara_id` values from retrieved poster context
+  (no bracket notation required — model is not instructed to use special citation syntax).
+- Mock isolation: `streamResponse` tests use `mockReset()` on each shared mock in `beforeEach`
+  (not just `clearAllMocks()`) to drain `mockReturnValueOnce` queues between tests.
 
 ---
 
 ## Testing Checkpoint
 
-- All Archivist service unit/integration tests pass (zero real API calls — fully mocked)
-- Manual SSE test: `curl -N -X POST localhost:3001/api/chat -H "Content-Type: application/json"
-  -d '{"message":"...", "session_id":"...", "poster_context_ids":[]}'`
-  → response streams word-by-word, final `done` event arrives
-- Verify a `archivist_sessions` row is created and updated in Supabase after the chat call
-- Verify `temperature: 0.2` is asserted in the mocked integration test (not just eyeballed)
-- `npm test` — full suite green; `npm run typecheck` — clean
+- ✅ All 29 Archivist service unit/integration tests pass (zero real API calls — fully mocked)
+- ✅ `npm test` — 194 total tests, all passing; `npm run typecheck` — clean
+- Manual SSE test: `curl -N -X POST localhost:3001/api/chat -H "Content-Type: application/json" \`
+  `-d '{"message":"Tell me about WPA posters.", "session_id":"<uuid>", "poster_context_ids":[]}'`
+  → streams delta events word-by-word; final event: `{"done":true,"citations":[],"confidence":0.85}`
+- After the curl test, verify an `archivist_sessions` row exists in Supabase with `turn_count: 1`

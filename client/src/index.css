@@ -1,7 +1,75 @@
 @import "tailwindcss";
 
 @theme {
-  /* Design tokens — populated in Phase 6 (Frontend Shell) */
-  --color-primary: #1a1a2e;
-  --color-surface: #ffffff;
+  /* === Typography === */
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'Playfair Display Variable', Georgia, serif;
+  --font-mono: 'JetBrains Mono Variable', 'Fira Code', monospace;
+
+  /* === Color Palette — Light Mode === */
+
+  /* Primary: Deep archival amber */
+  --color-primary-50:  oklch(97% 0.02 70);
+  --color-primary-100: oklch(93% 0.05 70);
+  --color-primary-200: oklch(85% 0.10 70);
+  --color-primary-300: oklch(75% 0.15 70);
+  --color-primary-400: oklch(65% 0.18 70);
+  --color-primary-500: oklch(55% 0.20 70);   /* Brand amber — main CTAs */
+  --color-primary-600: oklch(45% 0.18 70);
+  --color-primary-700: oklch(35% 0.15 70);
+  --color-primary-800: oklch(25% 0.10 70);
+  --color-primary-900: oklch(15% 0.05 70);
+
+  /* Neutral: Warm paper whites and archival grays */
+  --color-surface:     oklch(98% 0.005 75);  /* page background */
+  --color-surface-2:   oklch(95% 0.008 75);  /* card backgrounds */
+  --color-surface-3:   oklch(92% 0.010 75);  /* hover states */
+  --color-border:      oklch(85% 0.010 75);
+  --color-text:        oklch(20% 0.010 75);  /* primary text */
+  --color-text-muted:  oklch(45% 0.010 75);  /* secondary text */
+
+  /* Accent: WPA-inspired red for The Red Button only */
+  --color-danger:      oklch(52% 0.22 25);   /* Red Button — Human Handoff */
+  --color-danger-text: oklch(98% 0.01 25);
+
+  /* Success: Confidence indicator green */
+  --color-success:     oklch(55% 0.18 145);
+
+  /* Warning: Medium confidence amber */
+  --color-warning:     oklch(65% 0.18 70);
+
+  /* === Spacing === */
+  --spacing-discovery: 1.5rem;  /* consistent gap in the poster grid */
+
+  /* === Border Radius === */
+  --radius-card:   0.375rem;    /* subtle, not bubbly — archival feel */
+  --radius-button: 0.25rem;
+
+  /* === Shadows === */
+  --shadow-card:       0 1px 3px 0 oklch(0% 0 0 / 0.08), 0 1px 2px -1px oklch(0% 0 0 / 0.06);
+  --shadow-card-hover: 0 4px 12px 0 oklch(0% 0 0 / 0.12);
+}
+
+/* === Dark Mode Overrides === */
+@variant dark {
+  @theme {
+    --color-surface:     oklch(12% 0.010 250);  /* near-black with cool undertone */
+    --color-surface-2:   oklch(17% 0.012 250);
+    --color-surface-3:   oklch(22% 0.014 250);
+    --color-border:      oklch(30% 0.015 250);
+    --color-text:        oklch(93% 0.005 75);
+    --color-text-muted:  oklch(65% 0.008 75);
+    /* Primary and accent remain — they're identity colors */
+  }
+}
+
+/* === Base Styles === */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-sans);
 }

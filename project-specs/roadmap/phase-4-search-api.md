@@ -1,6 +1,6 @@
 # Phase 4 — Search API
 
-**Status**: ✅ Complete — 165 tests passing, typecheck clean.
+**Status**: ✅ Complete — 165 tests at phase completion (194 total after Phase 5 added 29 more), typecheck clean.
 
 **Depends on**: [Phase 3 — Ingestion Pipeline](./phase-3-ingestion.md)
   (real poster data with embeddings must be in Supabase to test against)
@@ -115,4 +115,4 @@ Unit tests (mocked):
   - `GET /api/posters/:id` returns full detail (no `embedding` field in response)
   - A fake UUID returns 404
 - Verify search event rows appear in `poster_search_events` table after each search
-- ✅ `npm test` — 165 tests, all passing; `npm run typecheck` — clean
+- ✅ `npm test` — 165 tests, all passing at phase completion; `npm run typecheck` — clean

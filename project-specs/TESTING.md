@@ -80,6 +80,29 @@ Because CLIP and The Archivist involve external APIs, their tests follow a stric
 4. **Never assert on exact AI-generated text** — assert on structure, citations present/absent,
    and the handoff trigger condition.
 
+### Mock Isolation Rule (Supabase chained mocks)
+
+The Supabase client is mocked as a chain of `vi.fn()` instances (`from → select → eq → maybeSingle`, etc.).
+Because `vi.clearAllMocks()` clears call history but **not** `mockReturnValueOnce` queues,
+queued values from one test bleed into the next.
+
+**Fix**: Any `describe` block that uses `mockReturnValueOnce` chains must call `mockReset()`
+on each shared mock in its `beforeEach`, not just `clearAllMocks()`:
+
+```typescript
+beforeEach(() => {
+  vi.clearAllMocks();
+  // Drain mockReturnValueOnce queues to prevent bleed between tests
+  mockSupabaseFrom.mockReset();
+  mockSelect.mockReset();
+  mockEq.mockReset();
+  mockMaybeSingle.mockReset();
+  // ...etc
+});
+```
+
+The `archivistService.test.ts` `streamResponse` describe block demonstrates this pattern.
+
 ---
 
 ## Running Tests

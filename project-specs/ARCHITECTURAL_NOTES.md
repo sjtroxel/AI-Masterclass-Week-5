@@ -108,22 +108,28 @@ React Client (VisualSiblings component)
 User asks a question in the Archivist sidebar
       │
 React Client (ArchivistSidebar component)
-      │  POST /api/chat  { message: string, session_id: string, poster_context_ids: string[] }
+      │  POST /api/chat  { message: string, session_id: UUID, poster_context_ids: UUID[],
+      │                    poster_similarity_scores?: Record<UUID, number> }
       ▼
 Express Route (server/routes/chat.ts)
       ▼
 archivistService.ts
-      │  (1) Load session history from archivist_sessions (Supabase)
-      │  (2) Retrieve metadata for poster_context_ids (NOT embeddings)
-      │  (3) Build context block (title, date, creator, description, subject_tags, nara_id)
-      │  (4) Assemble prompt: system + context + history + user message
-      │  (5) Check token budget — truncate history if approaching 8,000 tokens
-      │  (6) Call Anthropic SDK: claude-sonnet-4-6, temperature=0.2, max_tokens=1024
-      │  (7) Parse response — extract citations
-      │  (8) Persist message + response to archivist_sessions
+      │  (1) Load session from archivist_sessions — ValidationError if expired
+      │  (2) Fetch metadata for poster_context_ids from posters table (no embedding column)
+      │  (3) Build XML context block (nara_id, title, date, creator, description,
+      │       subject_tags, physical_description, overall_confidence, similarity_score)
+      │  (4) Check token budget — summarize oldest message pairs via Claude if approaching 8,000 tokens
+      │  (5) Assemble system prompt: base prompt + context block + optional confidence clause
+      │       (clause appended when any similarity_score < 0.72)
+      │  (6) Call Anthropic SDK stream: claude-sonnet-4-6, temperature=0.2, max_tokens=900
+      │  (7) Stream text deltas → SSE: data: {"delta": "..."}
+      │  (8) On stream complete: extract citations (scan for nara_id values in response text)
+      │  (9) Persist updated session (messages, turn_count, total_tokens) to archivist_sessions
+      │  (10) Send final SSE event: data: {"done": true, "citations": [...], "confidence": 0.85}
       ▼
 Express Response (streamed via Server-Sent Events)
-      │  { delta: string, citations: Citation[], confidence: number }
+      │  Delta events: { delta: string }
+      │  Final event:  { done: true, citations: Citation[], confidence: number }
       ▼
 React Client (streams into ArchivistMessage component)
 ```
@@ -155,14 +161,15 @@ React Client (streams into ArchivistMessage component)
 
 ## Infrastructure Decisions
 
-- **Deployment target**: Railway (full-stack: database + backend + frontend in one platform)
+- **Deployment target**: Railway (Express backend) + Vercel (React frontend SPA). Supabase hosts the database.
 - **Database**: Supabase PostgreSQL — chosen for pgvector extension, Auth, and Storage
   (poster thumbnail CDN), and the generous free tier for prototyping.
-- **CLIP model hosting**: Initially Replicate (`replicate/clip-vit-large-patch14`).
+- **CLIP model hosting**: Replicate (`cjwbw/clip-vit-large-patch14`, version hash in `.env.example`).
+  Model ID note: `openai/clip-vit-large-patch14` does NOT exist on Replicate; the correct owner prefix is `cjwbw/`.
   If request volume warrants it, migrate to a self-hosted container on Railway.
 - **No Kubernetes** — this is an MVP. Railway's usage-based pricing scales linearly.
-- **Secrets**: Environment variables injected by Railway. No `.env` committed to git.
-  Local development uses `.env.local` (gitignored).
+- **Secrets**: Environment variables injected by Railway (backend) and Vercel (frontend). No `.env` committed to git.
+  Local development uses `.env` at the monorepo root (gitignored).
 
 ---
 

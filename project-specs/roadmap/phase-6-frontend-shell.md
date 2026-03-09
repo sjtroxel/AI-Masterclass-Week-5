@@ -1,5 +1,7 @@
 # Phase 6 — Frontend Shell
 
+**Status**: ✅ Complete — 194 tests still passing (no new Vitest tests; shell verified visually per spec), typecheck clean.
+
 **Depends on**: [Phase 2 — Server Skeleton](./phase-2-server.md)
   (the typed API client needs to know the server's endpoint structure;
   Phase 4 does not need to be complete — the client just needs the shapes)
@@ -97,10 +99,35 @@ Base URL: read from `import.meta.env.VITE_API_URL` (set in `.env`)
 
 ---
 
+## Implementation Notes
+
+- **`chat()` SSE via fetch, not `EventSource`**: `EventSource` is GET-only (browser spec). Since
+  `/api/chat` is a `POST` endpoint, the client uses `fetch()` + `ReadableStream` parsing instead.
+  `chat(params, callbacks)` returns `{ close: () => void }` (backed by `AbortController`).
+  The `onToken`, `onDone`, and `onError` callbacks replace event listener attachment.
+
+- **`getPosterSiblings` returns `VisualSibling[]`**: The spec originally listed `PosterSummary[]`
+  but the `get_visual_siblings` RPC returns `similarity_score`, not `overall_confidence`.
+  The correct shared type is `VisualSibling` — used here to keep the types spec-accurate.
+
+- **`getSeries` returns `SeriesPageResponse`**: The full shared type (includes `total`, `page`,
+  `limit`) is used rather than the simplified `{ series, posters }` shape in the small bits list.
+
+- **Types re-export path**: `client/src/types/index.ts` re-exports from `'@poster-pilot/shared'`
+  (the workspace package name), not a relative file path.
+
+- **`vite-env.d.ts` required**: Added `client/src/vite-env.d.ts` with
+  `/// <reference types="vite/client" />` so `import.meta.env` types resolve in strict TypeScript.
+
+- **Font imports in `main.tsx`**: `@fontsource-variable/*` packages ship CSS; they must be
+  imported in `main.tsx` so Vite bundles the font files correctly.
+
+---
+
 ## Testing Checkpoint
 
-- `npm run dev:client` — app loads; all five routes render their stub content without errors
-- Dark mode toggle: switches appearance; survives page refresh; new tab defaults to system preference
-- `npm run typecheck` — client workspace compiles with zero errors
-- `npm test` — full suite still green (no new automated tests; shell is verified visually)
-- `debug('test')` only logs in dev mode; nothing in `npm run build` production output
+- ✅ `npm run dev:client` — app loads; all five routes render their stub content without errors
+- ✅ Dark mode toggle: switches appearance; survives page refresh; new tab defaults to system preference
+- ✅ `npm run typecheck` — client workspace compiles with zero errors
+- ✅ `npm test` — 194 tests, all passing (no new automated tests; shell verified visually)
+- ✅ `debug('test')` only logs in dev mode; nothing in `npm run build` production output
