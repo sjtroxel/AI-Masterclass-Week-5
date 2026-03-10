@@ -1,0 +1,37 @@
+# Supabase project configuration for the CLI.
+#
+# Fill in your project reference after running:
+#   supabase login
+#   supabase link --project-ref <your-project-ref>
+#
+# Your project ref is the subdomain of your Supabase URL:
+#   SUPABASE_URL = https://<project-ref>.supabase.co
+#
+project_id = "your-project-ref"
+
+[api]
+enabled     = true
+port        = 54321
+schemas     = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows    = 1000
+
+[db]
+port         = 54322
+shadow_port  = 54320
+major_version = 17
+
+[studio]
+enabled = true
+port    = 54323
+
+[inbucket]
+enabled = false
+port    = 54324
+
+[storage]
+enabled = true
+
+[auth]
+enabled = true
+site_url = "http://localhost:5173"

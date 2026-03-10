@@ -140,6 +140,49 @@ export const SIBLINGS = [
   },
 ] as const;
 
+// ─── Series page response ──────────────────────────────────────────────────────
+
+export const SERIES_RESPONSE = {
+  series: {
+    id:               '96357e58-178e-453b-a55d-ab64a95e7a70',
+    slug:             'wpa-posters',
+    title:            'WPA Posters',
+    description:      'Works Progress Administration poster collection from the New Deal era.',
+    nara_series_ref:  null,
+    poster_count:     3,
+    created_at:       '2026-01-01T00:00:00Z',
+  },
+  posters: [
+    {
+      id:                 POSTER_ID,
+      nara_id:            NARA_ID,
+      title:              'Work Pays America — WPA Labor Poster',
+      thumbnail_url:      'https://placehold.co/300x400/3b4863/ffffff?text=WPA+Poster',
+      series_title:       'WPA Posters',
+      overall_confidence: 0.91,
+    },
+    {
+      id:                 POSTER_ID_2,
+      nara_id:            NARA_ID_2,
+      title:              'Build for Defense — WPA Poster',
+      thumbnail_url:      'https://placehold.co/300x450/3b4863/ffffff?text=WPA+Defense',
+      series_title:       'WPA Posters',
+      overall_confidence: 0.85,
+    },
+    {
+      id:                 POSTER_ID_3,
+      nara_id:            NARA_ID_3,
+      title:              "America's Answer — WPA Art",
+      thumbnail_url:      'https://placehold.co/300x380/3b4863/ffffff?text=WPA+Art',
+      series_title:       'WPA Posters',
+      overall_confidence: 0.79,
+    },
+  ],
+  total: 3,
+  page:  1,
+  limit: 20,
+} as const;
+
 // ─── Archivist SSE stream ─────────────────────────────────────────────────────
 //
 // The api.ts chat() parser splits on \n\n and expects frames of the form:

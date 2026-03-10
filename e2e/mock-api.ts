@@ -13,6 +13,7 @@ import {
   SEARCH_HANDOFF,
   POSTER,
   SIBLINGS,
+  SERIES_RESPONSE,
   CHAT_SSE_BODY,
 } from './fixtures.js';
 
@@ -72,6 +73,19 @@ export async function mockSiblings(page: Page): Promise<void> {
         status:      200,
         contentType: 'application/json',
         body:        JSON.stringify({ data: SIBLINGS }),
+      }),
+  );
+}
+
+/** Intercept GET /api/series/:slug → series page fixture. */
+export async function mockSeries(page: Page): Promise<void> {
+  await page.route(
+    (url) => url.pathname.startsWith('/api/series/'),
+    (route) =>
+      route.fulfill({
+        status:      200,
+        contentType: 'application/json',
+        body:        JSON.stringify({ data: SERIES_RESPONSE }),
       }),
   );
 }
