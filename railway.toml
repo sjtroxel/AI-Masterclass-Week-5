@@ -1,0 +1,10 @@
+[build]
+builder = "nixpacks"
+buildCommand = "npm ci && npm run build:railway"
+
+[deploy]
+startCommand = "node server/dist/index.js"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 300
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 10
