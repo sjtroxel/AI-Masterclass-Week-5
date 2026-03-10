@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vitest';
 import { AIServiceError } from '../../middleware/errorHandler.js';
 
 // ─── Hoisted mocks ────────────────────────────────────────────────────────────
@@ -147,5 +147,111 @@ describe('generateImageEmbedding', () => {
     mockRun.mockRejectedValueOnce(new Error('Service unavailable'));
 
     await expect(generateImageEmbedding(BASE64_IMAGE)).rejects.toThrow(AIServiceError);
+  });
+});
+
+// ─── 429 rate-limit retry ──────────────────────────────────────────────────────
+
+describe('rate-limit retry (429)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterAll(() => {
+    vi.useRealTimers();
+  });
+
+  it('retries once on 429 and returns valid embedding on second attempt', async () => {
+    vi.useFakeTimers();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    mockRun
+      .mockRejectedValueOnce(new Error('Failed with status 429 Too Many Requests'))
+      .mockResolvedValueOnce(VALID_EMBEDDING);
+
+    const promise = generateTextEmbedding('test retry');
+    await vi.runAllTimersAsync();
+    const result = await promise;
+
+    expect(result).toBe(VALID_EMBEDDING);
+    expect(mockRun).toHaveBeenCalledTimes(2);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Rate limited'));
+
+    warnSpy.mockRestore();
+    vi.useRealTimers();
+  });
+
+  it('uses retry_after from the 429 error message to set the wait duration', async () => {
+    vi.useFakeTimers();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const timeoutSpy = vi.spyOn(global, 'setTimeout');
+
+    // Error message contains "retry_after": 30 — extractRetryAfter should parse 30 → wait = 31s
+    mockRun
+      .mockRejectedValueOnce(new Error('Rate limited: {"retry_after": 30} status 429'))
+      .mockResolvedValueOnce(VALID_EMBEDDING);
+
+    const promise = generateTextEmbedding('test retry-after');
+    await vi.runAllTimersAsync();
+    await promise;
+
+    // 30 (parsed) + 1 (buffer) = 31 seconds
+    expect(timeoutSpy).toHaveBeenCalledWith(expect.any(Function), 31000);
+
+    timeoutSpy.mockRestore();
+    warnSpy.mockRestore();
+    vi.useRealTimers();
+  });
+
+  it('falls back to 16-second wait when retry_after is absent from the 429 error', async () => {
+    vi.useFakeTimers();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const timeoutSpy = vi.spyOn(global, 'setTimeout');
+
+    // No "retry_after" in message → extractRetryAfter returns null → 15 + 1 = 16s
+    mockRun
+      .mockRejectedValueOnce(new Error('status 429 Too Many Requests'))
+      .mockResolvedValueOnce(VALID_EMBEDDING);
+
+    const promise = generateTextEmbedding('test default wait');
+    await vi.runAllTimersAsync();
+    await promise;
+
+    expect(timeoutSpy).toHaveBeenCalledWith(expect.any(Function), 16000);
+
+    timeoutSpy.mockRestore();
+    warnSpy.mockRestore();
+    vi.useRealTimers();
+  });
+
+  it('does NOT retry on non-429 errors (throws AIServiceError immediately)', async () => {
+    mockRun.mockRejectedValueOnce(new Error('status 500 Internal Server Error'));
+
+    await expect(generateTextEmbedding('test no-retry')).rejects.toThrow(AIServiceError);
+    expect(mockRun).toHaveBeenCalledTimes(1);
+  });
+
+  it('wraps object-shaped Replicate output via unwrapEmbedding', async () => {
+    // Some Replicate models return { embedding: [...] } instead of a bare array
+    mockRun.mockResolvedValueOnce({ embedding: VALID_EMBEDDING });
+
+    const result = await generateTextEmbedding('test unwrap');
+
+    expect(result).toHaveLength(768);
+    expect(result).toBe(VALID_EMBEDDING);
+  });
+
+  it('logs unrecognised object keys and throws AIServiceError when no known embedding key is found', async () => {
+    // Object returned has none of the recognised keys (embedding, embeddings, features, etc.)
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    mockRun.mockResolvedValueOnce({ data: VALID_EMBEDDING });
+
+    await expect(generateTextEmbedding('test unrecognised')).rejects.toThrow(AIServiceError);
+    expect(errSpy).toHaveBeenCalledWith(
+      '[clipService] Unrecognised object shape — keys:',
+      expect.arrayContaining(['data']),
+    );
+
+    errSpy.mockRestore();
   });
 });

@@ -178,8 +178,9 @@ The client-side Archivist is built as three cooperating layers:
 - **Deployment target**: Railway (Express backend) + Vercel (React frontend SPA). Supabase hosts the database.
 - **Database**: Supabase PostgreSQL — chosen for pgvector extension, Auth, and Storage
   (poster thumbnail CDN), and the generous free tier for prototyping.
-- **CLIP model hosting**: Replicate (`cjwbw/clip-vit-large-patch14`, version hash in `.env.example`).
-  Model ID note: `openai/clip-vit-large-patch14` does NOT exist on Replicate; the correct owner prefix is `cjwbw/`.
+- **CLIP model hosting**: Replicate (`openai/clip`, version hash `fd95fe35085b5b9a63d830d3126311ee6b32a7a976c78eb5f210a3a007bcdda6`, stored in `.env.example`).
+  This model accepts both `text` and `image` inputs, producing 768-dim vectors in the same embedding space.
+  Note: `cjwbw/clip-vit-large-patch14` was the original candidate but only exposes the image encoder — cannot embed text.
   If request volume warrants it, migrate to a self-hosted container on Railway.
 - **No Kubernetes** — this is an MVP. Railway's usage-based pricing scales linearly.
 - **Secrets**: Environment variables injected by Railway (backend) and Vercel (frontend). No `.env` committed to git.

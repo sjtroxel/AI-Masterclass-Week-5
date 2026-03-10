@@ -30,6 +30,7 @@ import { generateTextEmbedding, generateImageEmbedding } from '../clipService.js
 import { logSearchEvent } from '../posterService.js';
 import { expandVibeQuery } from '../queryAnalyzer.js';
 import type { QueryAnalysis } from '../queryAnalyzer.js';
+import { DatabaseError } from '../../middleware/errorHandler.js';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -153,6 +154,26 @@ describe('textSearch', () => {
     const response = await textSearch(TEXT_ANALYSIS, CTX);
 
     expect(response.query_mode).toBe('text');
+  });
+
+  it('returns confidence_level: low for results below the handoff threshold (0.72)', async () => {
+    // CLIP_SEARCH_FLOOR is 0.1, so results with scores below 0.72 can be returned
+    const lowSimilarityResult = makePoster('p-low', 0.65);
+    mockRpc.mockResolvedValue({ data: [lowSimilarityResult], error: null });
+
+    const response = await textSearch(TEXT_ANALYSIS, CTX);
+
+    expect(response.results[0]?.confidence_level).toBe('low');
+    // overall_confidence is 0.9 (default from makePoster), so no handoff on confidence
+    // but handoff is NOT triggered by confidence_level alone — it checks overall_confidence
+    expect(response.human_handoff_needed).toBe(false);
+  });
+
+  it('throws DatabaseError when the match_posters RPC returns an error', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: { message: 'pgvector index corrupt' } });
+
+    await expect(textSearch(TEXT_ANALYSIS, CTX)).rejects.toThrow(DatabaseError);
+    await expect(textSearch(TEXT_ANALYSIS, CTX)).rejects.toThrow('pgvector index corrupt');
   });
 });
 

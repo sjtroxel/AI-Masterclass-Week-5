@@ -243,4 +243,22 @@ describe('expandVibeQuery', () => {
 
     await expect(expandVibeQuery('vibe')).rejects.toThrow('upstream failure');
   });
+
+  it('throws AIServiceError when the model response has no content block (empty content array)', async () => {
+    mockCreate.mockResolvedValue({ content: [] });
+
+    await expect(expandVibeQuery('ethereal')).rejects.toThrow(AIServiceError);
+    await expect(expandVibeQuery('ethereal')).rejects.toThrow('unexpected response structure');
+  });
+
+  it('throws AIServiceError when array contains empty-string items (detail includes item count)', async () => {
+    // Array has 3 items but one is '' → fails the non-empty string guard → detail = "3 items"
+    mockCreate.mockResolvedValue({
+      content: [{ type: 'text', text: JSON.stringify(['valid description', '', 'another valid']) }],
+    });
+
+    const err = await expandVibeQuery('dark').catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(AIServiceError);
+    expect((err as AIServiceError).message).toContain('3 items');
+  });
 });

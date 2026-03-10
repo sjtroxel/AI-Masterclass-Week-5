@@ -24,7 +24,7 @@ All design tokens live in `client/src/index.css`. There is no `tailwind.config.j
 @theme {
   /* === Typography === */
   --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
-  --font-serif: 'Playfair Display Variable', Georgia, serif;
+  --font-serif: 'Fraunces Variable', Georgia, serif;
   --font-mono: 'JetBrains Mono Variable', 'Fira Code', monospace;
 
   /* === Color Palette — Light Mode === */
@@ -72,8 +72,8 @@ All design tokens live in `client/src/index.css`. There is no `tailwind.config.j
 }
 
 /* === Dark Mode Overrides === */
-@variant dark {
-  @theme {
+/* Applied via .dark class on <html> set by Header.tsx dark mode toggle — not a media query. */
+.dark {
     --color-surface:     oklch(12% 0.010 250);  /* near-black with cool undertone */
     --color-surface-2:   oklch(17% 0.012 250);
     --color-surface-3:   oklch(22% 0.014 250);
@@ -81,7 +81,6 @@ All design tokens live in `client/src/index.css`. There is no `tailwind.config.j
     --color-text:        oklch(93% 0.005 75);
     --color-text-muted:  oklch(65% 0.008 75);
     /* Primary and accent remain — they're identity colors */
-  }
 }
 ```
 
@@ -238,7 +237,7 @@ Layout:
 - The Archivist streaming text: `aria-live="polite"` on the message container
 - Image alt text: `"{title}" — {creator}, {date_created}, NARA collection`
 - Keyboard navigation: full grid navigation with arrow keys (future v2)
-- The Red Button: `role="alertdialog"` when it first appears (to announce to screen readers)
+- The Red Button / HandoffBanner: `role="alert"` (announces to screen readers when it appears; `alertdialog` is reserved for interactive modal dialogs)
 
 ---
 

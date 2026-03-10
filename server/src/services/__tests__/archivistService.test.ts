@@ -233,6 +233,47 @@ describe('buildContextBlock', () => {
 
     await expect(buildContextBlock([VALID_UUID])).rejects.toThrow(DatabaseError);
   });
+
+  it('returns empty string when poster_ids are provided but the DB returns no rows', async () => {
+    mockSupabaseFrom.mockReturnValue({
+      select: mockSelect.mockReturnValue({
+        in: mockIn.mockResolvedValue({ data: [], error: null }),
+      }),
+    });
+
+    const block = await buildContextBlock([VALID_UUID]);
+
+    expect(block).toBe('');
+  });
+
+  it('renders empty subjects string when subject_tags is null', async () => {
+    mockSupabaseFrom.mockReturnValue({
+      select: mockSelect.mockReturnValue({
+        in: mockIn.mockResolvedValue({
+          data: [
+            {
+              id: VALID_UUID,
+              nara_id: 'NAID-002',
+              title: 'No Tags Poster',
+              creator: null,
+              date_created: null,
+              series_title: null,
+              description: null,
+              subject_tags: null,   // triggers the '' else branch in subjects ternary
+              physical_description: null,
+              overall_confidence: 0.80,
+            },
+          ],
+          error: null,
+        }),
+      }),
+    });
+
+    const block = await buildContextBlock([VALID_UUID]);
+
+    expect(block).toContain('nara_id="NAID-002"');
+    expect(block).toContain('<subjects></subjects>');
+  });
 });
 
 // ─── loadSession ──────────────────────────────────────────────────────────────
@@ -541,7 +582,7 @@ describe('streamResponse', () => {
     expect(savedData['turn_count']).toBe(1);
   });
 
-  it('sends an SSE error event and calls next() on mid-stream error', async () => {
+  it('sends an SSE error event and calls next() on mid-stream error (plain Error)', async () => {
     // posterContextIds: [] → no fetchPosterContext Supabase call
     // Stream errors before saveSession → no saveSession call needed
     mockLoadSession(null);
@@ -564,6 +605,34 @@ describe('streamResponse', () => {
     expect(res.write).toHaveBeenCalled();
     const writes = (res.write as Mock).mock.calls.map((c) => c[0] as string);
     expect(writes.some((w) => w.includes('"error"'))).toBe(true);
+    // Non-AppError → code should be 'STREAM_ERROR', message the generic fallback
+    expect(writes.some((w) => w.includes('STREAM_ERROR'))).toBe(true);
+    expect(next).toHaveBeenCalledOnce();
+  });
+
+  it('sends AppError code and message in the SSE error event when the thrown error is an AppError', async () => {
+    // Covers the `err instanceof AppError` true branch at lines 404-405
+    mockLoadSession(null);
+    const streamObj = {
+      on: vi.fn().mockImplementation((_event: string, _cb: unknown) => streamObj),
+      finalMessage: vi.fn().mockRejectedValue(new AIServiceError('Replicate quota exceeded')),
+    };
+    mockMessagesStream.mockReturnValueOnce(streamObj);
+
+    const res = makeMockResponse();
+    res.headersSent = true;
+    const next = vi.fn();
+
+    await streamResponse(
+      { sessionId: SESSION_ID, message: 'Hello', posterContextIds: [], posterSimilarityScores: {} },
+      res as unknown as Response,
+      next,
+    );
+
+    const writes = (res.write as Mock).mock.calls.map((c) => c[0] as string);
+    // AppError → uses err.code ('AI_SERVICE_ERROR') and err.message
+    expect(writes.some((w) => w.includes('AI_SERVICE_ERROR'))).toBe(true);
+    expect(writes.some((w) => w.includes('Replicate quota exceeded'))).toBe(true);
     expect(next).toHaveBeenCalledOnce();
   });
 
@@ -584,5 +653,65 @@ describe('streamResponse', () => {
     expect(next).toHaveBeenCalledOnce();
     expect(next.mock.calls[0]?.[0]).toBeInstanceOf(SessionExpiredError);
     expect(res.write).not.toHaveBeenCalled();
+  });
+
+  it('triggers compressHistory when the session token budget is approaching', async () => {
+    // Build a session whose history exceeds the token budget so isApproachingBudget returns true.
+    // SYSTEM_PROMPT_TOKENS(400) + contextTokens(0) + historyTokens + RESPONSE_BUFFER(900) > 8000
+    // → historyTokens must exceed 6700 → need ~26,800+ chars of history content.
+    const longContent = 'x'.repeat(27_000);
+    const longSession = makeSession({
+      messages: Array.from({ length: 6 }, (_, i) => ({
+        role: (i % 2 === 0 ? 'user' : 'assistant') as 'user' | 'assistant',
+        content: i === 0 ? longContent : `msg ${i}`,
+        timestamp: '',
+      })),
+    });
+
+    mockLoadSession(longSession);
+    // No poster context → fetchPosterContext exits early, no Supabase call
+    // compressHistory fires: mockMessagesCreate handles the summarization call
+    mockMessagesCreate.mockResolvedValueOnce({
+      content: [{ type: 'text', text: 'Summary of earlier conversation.' }],
+    });
+    mockSaveSession();
+    mockMessagesStream.mockReturnValueOnce(makeStreamMock(['Compressed response.']));
+
+    await streamResponse(
+      { sessionId: SESSION_ID, message: 'What is this about?', posterContextIds: [], posterSimilarityScores: {} },
+      makeMockResponse() as unknown as Response,
+      vi.fn(),
+    );
+
+    // compressHistory calls messages.create once for summarization
+    expect(mockMessagesCreate).toHaveBeenCalledOnce();
+    // The main stream call happens after compression
+    expect(mockMessagesStream).toHaveBeenCalledOnce();
+  });
+
+  it('prepends a synthetic user message when session history starts with an assistant turn', async () => {
+    // Covers buildAnthropicMessages: if first stored message is assistant, prepend a placeholder
+    const assistantFirstSession = makeSession({
+      messages: [
+        { role: 'assistant', content: 'Welcome! How can I help?', timestamp: '' },
+        { role: 'user', content: 'Tell me about WPA.', timestamp: '' },
+      ],
+    });
+
+    mockLoadSession(assistantFirstSession);
+    mockSaveSession();
+    mockMessagesStream.mockReturnValueOnce(makeStreamMock(['Here is what I know.']));
+
+    await streamResponse(
+      { sessionId: SESSION_ID, message: 'Any more details?', posterContextIds: [], posterSimilarityScores: {} },
+      makeMockResponse() as unknown as Response,
+      vi.fn(),
+    );
+
+    expect(mockMessagesStream).toHaveBeenCalledOnce();
+    const callArgs = mockMessagesStream.mock.calls[0]?.[0] as { messages: Array<{ role: string; content: string }> };
+    // First message in the Anthropic call must be 'user' (the prepended placeholder)
+    expect(callArgs.messages[0]?.role).toBe('user');
+    expect(callArgs.messages[0]?.content).toContain('[Continuing our conversation]');
   });
 });
