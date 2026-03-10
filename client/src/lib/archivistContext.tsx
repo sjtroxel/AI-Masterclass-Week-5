@@ -109,7 +109,7 @@ export function ArchivistProvider({ children }: { children: ReactNode }) {
     text: string,
     posterContextIds?: string[],
   ): void => {
-    archivistSend(text, posterContextIds ?? posterContext.ids);
+    archivistSend(text, posterContextIds ?? posterContext.ids.slice(0, 5));
   }, [archivistSend, posterContext.ids]);
 
   return (
