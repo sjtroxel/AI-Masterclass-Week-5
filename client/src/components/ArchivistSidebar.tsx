@@ -98,6 +98,9 @@ export default function ArchivistSidebar() {
       <aside
         aria-label="The Archivist — AI research assistant"
         aria-hidden={!isOpen}
+        // inert prevents keyboard focus on off-screen children (fixes axe aria-hidden-focus rule)
+        // React 19 renders inert={true} as the empty presence attribute; inert={false} omits it.
+        inert={!isOpen || undefined}
         className={`
           fixed right-0 top-0 z-50 h-full
           w-full lg:w-96
