@@ -1,6 +1,6 @@
 [build]
 builder = "nixpacks"
-buildCommand = "npm ci && npm run build:railway"
+buildCommand = "npm run build:railway"
 
 [deploy]
 startCommand = "node server/dist/index.js"
