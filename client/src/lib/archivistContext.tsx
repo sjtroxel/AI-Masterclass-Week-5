@@ -16,8 +16,9 @@ export const SIDEBAR_OPEN_KEY = 'archivist-open';
 
 /** Maps nara_id → poster UUID. Populated by pages when their data loads. */
 type PosterContext = {
-  ids:   string[];
-  idMap: Record<string, string>;
+  ids:    string[];
+  idMap:  Record<string, string>;
+  scores: Record<string, number>;
 };
 
 type ArchivistContextValue = {
@@ -29,7 +30,7 @@ type ArchivistContextValue = {
 
   // Poster context — set by pages when their search results / poster data arrives
   posterContext:    PosterContext;
-  setPosterContext: (ids: string[], idMap: Record<string, string>) => void;
+  setPosterContext: (ids: string[], idMap: Record<string, string>, scores: Record<string, number>) => void;
 
   // Chat state (delegated to useArchivist)
   messages:      ChatMessage[];
@@ -64,8 +65,9 @@ export function ArchivistProvider({ children }: { children: ReactNode }) {
   });
 
   const [posterContext, setPosterContextState] = useState<PosterContext>({
-    ids:   [],
-    idMap: {},
+    ids:    [],
+    idMap:  {},
+    scores: {},
   });
 
   const {
@@ -97,10 +99,11 @@ export function ArchivistProvider({ children }: { children: ReactNode }) {
   // ── Poster context ──────────────────────────────────────────────────────────
 
   const setPosterContext = useCallback((
-    ids:   string[],
-    idMap: Record<string, string>,
+    ids:    string[],
+    idMap:  Record<string, string>,
+    scores: Record<string, number>,
   ): void => {
-    setPosterContextState({ ids, idMap });
+    setPosterContextState({ ids, idMap, scores });
   }, []);
 
   // ── sendMessage — falls back to stored poster context IDs ──────────────────
@@ -109,8 +112,9 @@ export function ArchivistProvider({ children }: { children: ReactNode }) {
     text: string,
     posterContextIds?: string[],
   ): void => {
-    archivistSend(text, posterContextIds ?? posterContext.ids.slice(0, 5));
-  }, [archivistSend, posterContext.ids]);
+    const ids = posterContextIds ?? posterContext.ids.slice(0, 20);
+    archivistSend(text, ids, posterContext.scores);
+  }, [archivistSend, posterContext.ids, posterContext.scores]);
 
   return (
     <ArchivistContext.Provider

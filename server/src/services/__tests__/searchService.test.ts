@@ -100,13 +100,25 @@ describe('textSearch', () => {
     expect(response.results).toHaveLength(0);
   });
 
-  it('sets handoff_needed: true and reason: low_confidence when top result has overall_confidence < 0.65', async () => {
+  it('does NOT set handoff_needed when top result has high similarity despite low overall_confidence', async () => {
+    // LOW_CONF_RESULT has similarity_score=0.88 but overall_confidence=0.60.
+    // overall_confidence is no longer used for the handoff decision — only
+    // similarity_score matters. Score 0.88 is well above the 0.20 floor.
     mockRpc.mockResolvedValue({ data: [LOW_CONF_RESULT], error: null });
 
     const response = await textSearch(TEXT_ANALYSIS, CTX);
 
+    expect(response.human_handoff_needed).toBe(false);
+  });
+
+  it('sets handoff_needed: true and reason: low_similarity when top similarity_score < 0.20', async () => {
+    const veryLowResult = makePoster('p-very-low', 0.15);
+    mockRpc.mockResolvedValue({ data: [veryLowResult], error: null });
+
+    const response = await textSearch(TEXT_ANALYSIS, CTX);
+
     expect(response.human_handoff_needed).toBe(true);
-    expect(response.handoff_reason).toBe('low_confidence');
+    expect(response.handoff_reason).toBe('low_similarity');
   });
 
   it('calls generateTextEmbedding with the processed query', async () => {
@@ -164,8 +176,7 @@ describe('textSearch', () => {
     const response = await textSearch(TEXT_ANALYSIS, CTX);
 
     expect(response.results[0]?.confidence_level).toBe('low');
-    // overall_confidence is 0.9 (default from makePoster), so no handoff on confidence
-    // but handoff is NOT triggered by confidence_level alone — it checks overall_confidence
+    // similarity_score 0.65 is above the 0.20 floor, so no handoff is triggered
     expect(response.human_handoff_needed).toBe(false);
   });
 

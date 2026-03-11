@@ -20,8 +20,8 @@ const MODEL = 'claude-sonnet-4-6';
 const TEMPERATURE = 0.2;
 const MAX_TOKENS = 900;
 const HANDOFF_THRESHOLD = 0.72;
-const MAX_CONTEXT_POSTERS = 5;
-const TOKEN_BUDGET = 8000;
+const MAX_CONTEXT_POSTERS = 20;
+const TOKEN_BUDGET = 20000;
 const SYSTEM_PROMPT_TOKENS = 400; // estimated fixed overhead
 const RESPONSE_BUFFER_TOKENS = 900;
 const TOKENS_PER_POSTER = 300;   // estimated tokens per context block poster
@@ -369,13 +369,22 @@ export async function streamResponse(
     const citations = extractCitations(fullText, posterNaraIds);
     const now = new Date().toISOString();
 
+    // Compute confidence from the actual average similarity score of the poster
+    // context. This gives a real, query-varying number instead of a binary 0.6/0.85.
+    // Falls back to 0 when no scores are available (e.g. detail-page context).
+    const scoreValues = Object.values(params.posterSimilarityScores);
+    const confidence =
+      scoreValues.length > 0
+        ? scoreValues.reduce((sum, s) => sum + s, 0) / scoreValues.length
+        : (lowConfidence ? 0.6 : 0.85);
+
     const userMsg: ChatMessage = { role: 'user', content: params.message, timestamp: now };
     const assistantMsg: ChatMessage = {
       role: 'assistant',
       content: fullText,
       citations,
       timestamp: now,
-      confidence: lowConfidence ? 0.6 : 0.85,
+      confidence,
       handoff_suggested: lowConfidence,
     };
 
@@ -392,7 +401,6 @@ export async function streamResponse(
     await saveSession(updatedSession);
 
     // 7. Final SSE event
-    const confidence = lowConfidence ? 0.6 : 0.85;
     res.write(`data: ${JSON.stringify({ done: true, citations, confidence })}\n\n`);
     res.end();
   } catch (err) {

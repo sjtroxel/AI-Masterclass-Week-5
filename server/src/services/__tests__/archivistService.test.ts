@@ -121,11 +121,11 @@ describe('isApproachingBudget', () => {
     expect(isApproachingBudget(session, 300)).toBe(false);
   });
 
-  it('returns true when total exceeds 8,000 tokens', () => {
+  it('returns true when total exceeds 20,000 tokens', () => {
     // Fill history to push us over the limit.
-    // system(400) + context(1500) + history + response(900) > 8000
-    // → history must exceed 5200 tokens → ~20,800 chars
-    const longContent = 'x'.repeat(21_000);
+    // system(400) + context(1500) + history + response(900) > 20000
+    // → history must exceed 17200 tokens → >68,800 chars
+    const longContent = 'x'.repeat(70_000);
     const session = makeSession({
       messages: [{ role: 'user', content: longContent, timestamp: '' }],
     });
@@ -411,7 +411,7 @@ describe('compressHistory', () => {
       content: [{ type: 'text', text: 'Compressed.' }],
     });
 
-    const longContent = 'x'.repeat(21_000);
+    const longContent = 'x'.repeat(70_000);
     const messages = Array.from({ length: 6 }, (_, i) => ({
       role: (i % 2 === 0 ? 'user' : 'assistant') as 'user' | 'assistant',
       content: i === 0 ? longContent : `msg ${i}`,
@@ -657,9 +657,9 @@ describe('streamResponse', () => {
 
   it('triggers compressHistory when the session token budget is approaching', async () => {
     // Build a session whose history exceeds the token budget so isApproachingBudget returns true.
-    // SYSTEM_PROMPT_TOKENS(400) + contextTokens(0) + historyTokens + RESPONSE_BUFFER(900) > 8000
-    // → historyTokens must exceed 6700 → need ~26,800+ chars of history content.
-    const longContent = 'x'.repeat(27_000);
+    // SYSTEM_PROMPT_TOKENS(400) + contextTokens(0) + historyTokens + RESPONSE_BUFFER(900) > 20000
+    // → historyTokens must exceed 18700 → need ~74,800+ chars of history content.
+    const longContent = 'x'.repeat(76_000);
     const longSession = makeSession({
       messages: Array.from({ length: 6 }, (_, i) => ({
         role: (i % 2 === 0 ? 'user' : 'assistant') as 'user' | 'assistant',

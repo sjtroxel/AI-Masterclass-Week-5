@@ -16,7 +16,7 @@ const uuidString = z.string().regex(UUID_REGEX, 'Must be a valid UUID');
 const chatBodySchema = z.object({
   message: z.string().min(1).max(2000),
   session_id: uuidString,
-  poster_context_ids: z.array(uuidString).max(5),
+  poster_context_ids: z.array(uuidString).max(20),
   // Similarity scores keyed by poster UUID — drives the confidence clause and
   // per-poster score display in the context XML. Optional; defaults to {}.
   poster_similarity_scores: z.record(z.string(), z.number()).optional(),

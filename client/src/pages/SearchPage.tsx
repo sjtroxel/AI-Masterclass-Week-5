@@ -22,9 +22,10 @@ export default function SearchPage() {
 
   // Keep the Archivist's poster context in sync with current search results
   useEffect(() => {
-    const ids   = results.map((r) => r.poster.id);
-    const idMap = buildPosterIdMap(results.map((r) => r.poster));
-    setPosterContext(ids, idMap);
+    const ids    = results.map((r) => r.poster.id);
+    const idMap  = buildPosterIdMap(results.map((r) => r.poster));
+    const scores = Object.fromEntries(results.map((r) => [r.poster.id, r.similarity_score]));
+    setPosterContext(ids, idMap, scores);
   }, [results, setPosterContext]);
 
   const showSkeleton = loading && results.length === 0;

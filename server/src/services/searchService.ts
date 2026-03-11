@@ -20,8 +20,12 @@ import type {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-/** overall_confidence below this triggers a 'low_confidence' handoff (per database.md). */
-const AI_CONFIDENCE_HANDOFF_THRESHOLD = 0.65;
+/**
+ * Minimum acceptable similarity score for the top search result.
+ * CLIP text↔image cosine similarities of 0.20–0.45 are normal for relevant results;
+ * below 0.20 means the vector search genuinely couldn't find anything on-topic.
+ */
+const TOP_RESULT_SIMILARITY_FLOOR = 0.20;
 
 /** Default maximum result count per search. */
 const DEFAULT_MATCH_COUNT = 20;
@@ -56,11 +60,13 @@ function computeHandoff(results: PosterResult[]): {
   if (results.length === 0) {
     return { needed: true, reason: 'low_similarity' };
   }
-  // The match_posters RPC already filters at HUMAN_HANDOFF_THRESHOLD (0.72),
-  // but even results above the similarity threshold may have low overall_confidence
-  // when the CLIP embedding is weak (poor image quality, missing metadata).
-  if ((results[0]?.overall_confidence ?? 1) < AI_CONFIDENCE_HANDOFF_THRESHOLD) {
-    return { needed: true, reason: 'low_confidence' };
+  // Trigger handoff only when the top result has genuinely low CLIP similarity —
+  // meaning the vector search couldn't find anything on-topic. CLIP text↔image
+  // scores of 0.20–0.45 are healthy; below 0.20 is a real miss.
+  // NOTE: overall_confidence was previously used here but is consistently low across
+  // the DPLA corpus due to sparse metadata — not an accurate signal for this check.
+  if ((results[0]?.similarity_score ?? 0) < TOP_RESULT_SIMILARITY_FLOOR) {
+    return { needed: true, reason: 'low_similarity' };
   }
   return { needed: false, reason: undefined };
 }

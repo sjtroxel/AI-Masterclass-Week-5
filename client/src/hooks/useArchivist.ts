@@ -47,7 +47,7 @@ export type UseArchivistReturn = {
   sessionId: string;
   handoffNeeded: boolean;
   error: string | null;
-  sendMessage: (text: string, posterContextIds: string[]) => void;
+  sendMessage: (text: string, posterContextIds: string[], posterSimilarityScores?: Record<string, number>) => void;
   resetSession: () => void;
 };
 
@@ -68,6 +68,7 @@ export function useArchivist(): UseArchivistReturn {
     posterContextIds: string[],
     currentSessionId: string,
     isRetry?: boolean,
+    posterSimilarityScores?: Record<string, number>,
   ) => void) | null>(null);
 
   const doSend = useCallback((
@@ -75,6 +76,7 @@ export function useArchivist(): UseArchivistReturn {
     posterContextIds: string[],
     currentSessionId: string,
     isRetry = false,
+    posterSimilarityScores: Record<string, number> = {},
   ): void => {
     // Abort any in-flight stream before starting a new one
     streamRef.current?.close();
@@ -91,9 +93,10 @@ export function useArchivist(): UseArchivistReturn {
 
     const stream = api.chat(
       {
-        message:             text,
-        session_id:          currentSessionId,
-        poster_context_ids:  posterContextIds,
+        message:                  text,
+        session_id:               currentSessionId,
+        poster_context_ids:       posterContextIds,
+        poster_similarity_scores: posterSimilarityScores,
       },
       {
         onToken: (delta) => {
@@ -139,7 +142,7 @@ export function useArchivist(): UseArchivistReturn {
             const newId = crypto.randomUUID();
             try { sessionStorage.setItem(SESSION_KEY, newId); } catch { /* noop */ }
             setSessionId(newId);
-            doSendRef.current?.(text, posterContextIds, newId, true);
+            doSendRef.current?.(text, posterContextIds, newId, true, posterSimilarityScores);
             return;
           }
           // ── Remove empty assistant placeholder on error ─────────────────
@@ -171,8 +174,12 @@ export function useArchivist(): UseArchivistReturn {
     return () => { streamRef.current?.close(); };
   }, []);
 
-  const sendMessage = useCallback((text: string, posterContextIds: string[]): void => {
-    doSend(text, posterContextIds, sessionId);
+  const sendMessage = useCallback((
+    text: string,
+    posterContextIds: string[],
+    posterSimilarityScores: Record<string, number> = {},
+  ): void => {
+    doSend(text, posterContextIds, sessionId, false, posterSimilarityScores);
   }, [doSend, sessionId]);
 
   const resetSession = useCallback((): void => {
