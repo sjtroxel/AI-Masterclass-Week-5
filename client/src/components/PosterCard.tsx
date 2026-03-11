@@ -62,7 +62,7 @@ export default function PosterCard({ poster, similarityScore, onSelect }: Poster
         </p>
 
         {poster.series_title && (
-          <span className="inline-block self-start rounded-button bg-primary-100 px-2 py-0.5 font-sans text-xs text-primary-700">
+          <span className="block max-w-full truncate rounded-button bg-primary-100 px-2 py-0.5 font-sans text-xs text-primary-700">
             {poster.series_title}
           </span>
         )}

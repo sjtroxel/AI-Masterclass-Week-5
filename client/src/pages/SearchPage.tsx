@@ -37,7 +37,7 @@ export default function SearchPage() {
       <div className="mx-auto max-w-6xl flex flex-col gap-8">
         {/* Search bar + Archivist toggle */}
         <div className="flex items-start gap-3">
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <SearchBar
               query={query}
               mode={mode}

@@ -67,10 +67,11 @@
   box-sizing: border-box;
 }
 
-html {
+html, body {
   background-color: var(--color-surface);
   color: var(--color-text);
   font-family: var(--font-sans);
+  overflow-x: hidden; /* prevent any overflowing child from creating horizontal scroll */
 }
 
 /* === <progress> element — ConfidenceIndicator === */
