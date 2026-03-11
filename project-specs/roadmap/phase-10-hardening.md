@@ -1,8 +1,48 @@
-# Phase 10 — Hardening, Testing & Deployment
+# Phase 10 — Hardening, Testing & Deployment ✅ COMPLETE
+
+**Completed**: 2026-03-10
+**Backend**: `https://poster-pilot.up.railway.app`
+**Frontend**: `https://poster-pilot.vercel.app`
+**Posters ingested**: 5,000+ across 43 series
 
 **Depends on**: [Phase 9 — Archivist Sidebar UI](./phase-9-archivist-ui.md)
   (all features must be complete and manually verified before hardening begins)
 **Next phase**: None. This is the final phase.
+
+---
+
+## Deployment Notes (What Actually Happened)
+
+### Monorepo shared package fix
+`shared/package.json` exports must point to compiled JS for production:
+- `exports.types`: `./src/index.ts` (TypeScript uses this during tsc compilation)
+- `exports.default`: `./dist/index.js` (Node.js uses this at runtime — cannot load .ts)
+- `pretest` script added to root package.json to build shared before vitest runs in CI
+
+### railway.toml (required — without it Railway uses wrong build command)
+```toml
+[build]
+builder = "nixpacks"
+buildCommand = "npm run build:railway"   # NOT "npm ci && ..." — Railway runs npm ci itself
+
+[deploy]
+startCommand = "node server/dist/index.js"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 300
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 10
+```
+
+### Railway dashboard settings to clear
+- **Custom Build Command**: clear it (dashboard overrides railway.toml if set)
+- **Watch Paths**: clear it (default `/server/**` ignores root-level commits)
+- **Networking port**: 8080 (Railway injects PORT=8080, not 3001)
+
+### Vercel settings
+- Root Directory: `./` (repo root — workspace resolution requires seeing all packages)
+- Build Command: `npm run build --workspace=shared && npm run build --workspace=client`
+- Output Directory: `client/dist`
+- `client/vercel.json`: `{"rewrites":[{"source":"/(.*)","destination":"/index.html"}]}`
 
 ---
 

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
 import type { ChatMessage } from '@poster-pilot/shared';
 import ConfidenceIndicator from './ConfidenceIndicator.js';
 
@@ -49,30 +50,43 @@ export default function ArchivistMessage({
         /* aria-live on assistant bubbles so screen readers announce new tokens */
         {...(isAssistant ? { 'aria-live': 'polite' as const, 'aria-atomic': false } : {})}
       >
-        {/* Message text — preserves whitespace for paragraph breaks */}
-        <p className="font-sans text-sm leading-relaxed whitespace-pre-wrap">
-          {message.content}
-          {/* Thinking indicator — three bouncing dots; visible only before first token */}
-          {streaming && message.content === '' && (
-            <span
-              className="inline-flex items-center gap-0.5"
-              aria-label="The Archivist is thinking"
-            >
+        {/* Message text */}
+        {isAssistant ? (
+          <div className="font-sans text-sm leading-relaxed [&>p]:mb-2 [&>p:last-child]:mb-0 [&>ul]:mb-2 [&>ul]:list-disc [&>ul]:pl-4 [&>ol]:mb-2 [&>ol]:list-decimal [&>ol]:pl-4 [&>li]:mb-0.5 [&>strong]:font-semibold [&_strong]:font-semibold [&>h1]:font-semibold [&>h2]:font-semibold [&>h3]:font-semibold">
+            {streaming && message.content === '' ? (
               <span
-                className="size-1.5 animate-bounce rounded-full bg-text-muted [animation-delay:0ms]"
-                aria-hidden="true"
-              />
-              <span
-                className="size-1.5 animate-bounce rounded-full bg-text-muted [animation-delay:150ms]"
-                aria-hidden="true"
-              />
-              <span
-                className="size-1.5 animate-bounce rounded-full bg-text-muted [animation-delay:300ms]"
-                aria-hidden="true"
-              />
-            </span>
-          )}
-        </p>
+                className="inline-flex items-center gap-0.5"
+                aria-label="The Archivist is thinking"
+              >
+                <span className="size-1.5 animate-bounce rounded-full bg-text-muted [animation-delay:0ms]" aria-hidden="true" />
+                <span className="size-1.5 animate-bounce rounded-full bg-text-muted [animation-delay:150ms]" aria-hidden="true" />
+                <span className="size-1.5 animate-bounce rounded-full bg-text-muted [animation-delay:300ms]" aria-hidden="true" />
+              </span>
+            ) : (
+              <ReactMarkdown
+                components={{
+                  // Open external links safely; internal links are rare in Archivist output
+                  a: ({ href, children }) => (
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary-600 underline decoration-dotted hover:text-primary-700"
+                    >
+                      {children}
+                    </a>
+                  ),
+                }}
+              >
+                {message.content}
+              </ReactMarkdown>
+            )}
+          </div>
+        ) : (
+          <p className="font-sans text-sm leading-relaxed whitespace-pre-wrap">
+            {message.content}
+          </p>
+        )}
 
         {/* Citations — rendered only after streaming completes */}
         {!streaming && isAssistant && message.citations && message.citations.length > 0 && (

@@ -174,19 +174,20 @@ built in parallel once Phase 4 is complete — they have no dependency on each o
 
 ---
 
-### Phase 10 — Hardening, Testing & Deployment
+### Phase 10 — Hardening, Testing & Deployment ✅
 **File**: [`roadmap/phase-10-hardening.md`](./roadmap/phase-10-hardening.md)
 **Depends on**: Phase 9 (all features complete)
 
 **Definition of Done**:
-- Vitest coverage ≥ 80% for all `server/services/` files
-- Playwright E2E tests pass in CI against the Vercel preview URL
-- Zero axe-core violations on any route
-- Supabase Edge Function `cleanup-expired-sessions` deployed and scheduled
-- Railway backend live: `GET /api/health` → `{ status: 'ok', db: 'connected' }`
-- Vercel frontend live: full search-to-results flow works end-to-end
-- CORS `origin` allowlist is the exact Vercel domain — never `*`
-- All secrets in Railway/Vercel environment variables — zero in the codebase
+- ✅ Vitest coverage ≥ 80% for all `server/services/` files (99.54% statements, 92.48% branch)
+- ✅ Playwright E2E tests: 31/31 passing across 6 spec files
+- ✅ Zero axe-core violations on any route
+- ✅ Supabase Edge Function `cleanup-expired-sessions` deployed and scheduled nightly at 02:00 UTC
+- ✅ Railway backend live at `https://poster-pilot.up.railway.app` — `/api/health` → `{ status: 'ok', db: 'connected' }`
+- ✅ Vercel frontend live at `https://poster-pilot.vercel.app` — full search-to-results flow works
+- ✅ CORS locked to `https://poster-pilot.vercel.app` — never `*`
+- ✅ All secrets in Railway/Vercel environment variables — zero in the codebase
+- ✅ 5,000+ posters ingested across 43 series from DPLA
 
 ---
 
@@ -223,4 +224,4 @@ These apply at every phase. A code review that finds any of these is a blocker �
 | 7 | Search UI | Phases 4 + 6 | ✅ | Full search flow; Red Button works; responsive |
 | 8 | Detail Pages | Phases 4 + 7 | ✅ | All routes; Visual Siblings; NARA links |
 | 9 | Archivist UI | Phases 5 + 8 | ✅ | Streaming; citations; pre-seed from siblings |
-| 10 | Hardening | Phase 9 | ⬜ | ≥80% coverage; E2E passes; live in production |
+| 10 | Hardening | Phase 9 | ✅ | 253 tests passing; Railway + Vercel live; 5,000+ posters |
