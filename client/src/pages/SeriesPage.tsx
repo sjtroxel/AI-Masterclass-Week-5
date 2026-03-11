@@ -84,7 +84,7 @@ export default function SeriesPage() {
 
   if (fetchState === 'loading') {
     return (
-      <main className="min-h-screen bg-surface pl-4 pr-10 py-8 md:pl-8 md:pr-12">
+      <main className="min-h-screen bg-surface px-4 py-8 md:px-8">
         <div className="mx-auto max-w-6xl flex flex-col gap-8">
           <div className="flex flex-col gap-3">
             <div className="h-8 w-64 animate-pulse rounded bg-surface-2" />
@@ -98,7 +98,7 @@ export default function SeriesPage() {
 
   if (fetchState === 'error') {
     return (
-      <main className="min-h-screen bg-surface pl-4 pr-10 py-8 md:pl-8 md:pr-12">
+      <main className="min-h-screen bg-surface px-4 py-8 md:px-8">
         <div className="mx-auto max-w-6xl">
           <ErrorState
             message={errorMsg}
@@ -110,7 +110,7 @@ export default function SeriesPage() {
   }
 
   return (
-    <main className="min-h-screen bg-surface pl-4 pr-10 py-8 md:pl-8 md:pr-12">
+    <main className="min-h-screen bg-surface px-4 py-8 md:px-8">
       <div className="mx-auto max-w-6xl flex flex-col gap-8">
 
         {/* Series header */}

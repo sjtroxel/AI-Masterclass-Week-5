@@ -84,7 +84,7 @@ export default function PosterDetailPage() {
 
   if (fetchState === 'loading') {
     return (
-      <main className="min-h-screen bg-surface pl-4 pr-10 py-8 md:pl-8 md:pr-12">
+      <main className="min-h-screen bg-surface px-4 py-8 md:px-8">
         <div className="mx-auto max-w-6xl">
           <div className="mb-6 h-4 w-48 animate-pulse rounded bg-surface-2" />
           <div className="flex flex-col gap-8 md:flex-row">
@@ -109,7 +109,7 @@ export default function PosterDetailPage() {
 
   if (fetchState === 'error' || !poster) {
     return (
-      <main className="min-h-screen bg-surface pl-4 pr-10 py-8 md:pl-8 md:pr-12">
+      <main className="min-h-screen bg-surface px-4 py-8 md:px-8">
         <div className="mx-auto max-w-6xl">
           <ErrorState
             message={errorMsg || 'Poster not found.'}
@@ -129,7 +129,7 @@ export default function PosterDetailPage() {
     .join(' — ');
 
   return (
-    <main className="min-h-screen bg-surface pl-4 pr-10 py-8 md:pl-8 md:pr-12">
+    <main className="min-h-screen bg-surface px-4 py-8 md:px-8">
       <div className="mx-auto max-w-6xl flex flex-col gap-8">
 
         {/* Breadcrumb / Back navigation */}

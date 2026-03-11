@@ -45,15 +45,15 @@ export default function Header() {
   }
 
   return (
-    <header className="flex items-center justify-between border-b border-border bg-surface-2 px-6 py-4">
+    <header className="flex items-center justify-between border-b border-border bg-surface-2 px-4 py-3 md:px-6 md:py-4">
       {/* Wordmark */}
       <Link
         to="/"
-        className="flex items-center gap-3 no-underline"
+        className="flex items-center gap-2 no-underline"
         aria-label="Poster Pilot — home"
       >
-        <img src={logoSrc} alt="" aria-hidden="true" className="h-9 w-auto" />
-        <span className="font-serif text-2xl font-bold text-text">Poster Pilot</span>
+        <img src={logoSrc} alt="" aria-hidden="true" className="h-7 w-auto md:h-9" />
+        <span className="font-serif text-xl font-bold text-text md:text-2xl">Poster Pilot</span>
       </Link>
 
       {/* Placeholder for Search Bar (Phase 7) */}

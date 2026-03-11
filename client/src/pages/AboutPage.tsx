@@ -2,7 +2,7 @@ import logoSrc from '../images/PosterPilotLogo.png';
 
 export default function AboutPage() {
   return (
-    <main className="min-h-screen bg-surface pl-4 pr-10 py-12 md:pl-8 md:pr-12">
+    <main className="min-h-screen bg-surface px-4 py-12 md:px-8">
       <div className="mx-auto max-w-3xl flex flex-col gap-10">
 
         {/* Page heading */}
