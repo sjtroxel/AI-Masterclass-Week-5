@@ -42,8 +42,8 @@ export default function HandoffBanner({ query, results, handoffReason }: Handoff
       aria-label="Low-confidence results — expert review available"
       className="
         flex gap-4 rounded-card border border-danger/30 bg-danger/5
-        pl-4 pr-6 py-4
-        [border-left-width:4px] [border-left-color:var(--color-danger)]
+        px-4 py-4
+        [border-left-width:4px] border-l-danger
       "
     >
       {/* Warning icon */}
@@ -73,7 +73,7 @@ export default function HandoffBanner({ query, results, handoffReason }: Handoff
           A human archivist can provide more precise assistance with your query.
           These results are still shown below — this is an invitation, not a wall.
         </p>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3">
           <a
             href={buildMailto(query, results, handoffReason)}
             className="

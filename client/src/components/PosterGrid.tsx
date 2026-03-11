@@ -17,6 +17,15 @@ export default function PosterGrid({
   onLoadMore,
   onSelect,
 }: PosterGridProps) {
+  // Normalize similarity scores within this result set so the best result
+  // always displays as 100%. This is purely a display transform — raw scores
+  // are used for handoff logic and event logging. Without this, CLIP
+  // text→image scores (which top out around 0.25–0.35) would always
+  // show as red even for genuinely relevant results.
+  const maxScore = results.reduce((m, r) => Math.max(m, r.similarity_score), 0);
+  const normalizeScore = (raw: number) =>
+    maxScore > 0 ? Math.min(1, raw / maxScore) : raw;
+
   return (
     <section aria-label="Search results">
       {/* CSS masonry via columns — no JS library needed */}
@@ -25,7 +34,7 @@ export default function PosterGrid({
           <PosterCard
             key={poster.id}
             poster={poster}
-            similarityScore={similarity_score}
+            similarityScore={normalizeScore(similarity_score)}
             onSelect={onSelect}
           />
         ))}

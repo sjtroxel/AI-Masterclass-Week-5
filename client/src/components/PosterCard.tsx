@@ -1,5 +1,6 @@
 import type { PosterSummary } from '@poster-pilot/shared';
 import ConfidenceIndicator from './ConfidenceIndicator.js';
+import ScoreLabel from './ScoreLabel.js';
 
 interface PosterCardProps {
   poster: PosterSummary;
@@ -66,12 +67,28 @@ export default function PosterCard({ poster, similarityScore, onSelect }: Poster
           </span>
         )}
 
-        {/* Similarity score badge — only shown on search results */}
-        {similarityScore !== undefined && (
-          <div className="mt-1">
-            <ConfidenceIndicator score={similarityScore} showLabel />
+        {/* Scores */}
+        <div className="mt-1 flex flex-col gap-2">
+          {/* Relevance — only shown on search results */}
+          {similarityScore !== undefined && (
+            <div className="flex flex-col gap-0.5">
+              <ScoreLabel
+                label="Relevance"
+                description="How closely this poster matches your search query, relative to other results in this set. 100% = the best match returned."
+              />
+              <ConfidenceIndicator score={similarityScore} showLabel variant="search" />
+            </div>
+          )}
+
+          {/* Archival confidence — always shown */}
+          <div className="flex flex-col gap-0.5">
+            <ScoreLabel
+              label="Archival confidence"
+              description="How complete and reliable the NARA catalog record is for this poster. Based on metadata richness and image quality at the time of indexing."
+            />
+            <ConfidenceIndicator score={poster.overall_confidence} showLabel />
           </div>
-        )}
+        </div>
       </div>
     </article>
   );

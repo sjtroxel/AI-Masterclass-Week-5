@@ -32,7 +32,7 @@ export default function SearchPage() {
   const showResults  = results.length > 0;
 
   return (
-    <main className="min-h-screen bg-surface px-4 py-8 md:px-8">
+    <main className="min-h-screen bg-surface pl-4 pr-10 py-8 md:pl-8 md:pr-12">
       <div className="mx-auto max-w-6xl flex flex-col gap-8">
         {/* Search bar + Archivist toggle */}
         <div className="flex items-start gap-3">
@@ -77,7 +77,8 @@ export default function SearchPage() {
               >
                 <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
               </svg>
-              Ask Archivist
+              {/* Hide label on small screens — icon + title attr is enough */}
+              <span className="hidden sm:inline">Ask Archivist</span>
             </button>
           )}
         </div>

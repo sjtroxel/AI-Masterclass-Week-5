@@ -96,6 +96,7 @@ export default function SearchBar({
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter') {
       const img = imageSource || imageUrl || undefined;
+      if (mode === 'hybrid' && !img) return;
       fireSubmitNow(img);
     }
     if (e.key === 'Escape') {
@@ -176,7 +177,11 @@ export default function SearchBar({
         <button
           type="button"
           onClick={() => fireSubmit(resolvedImage())}
-          disabled={loading || (mode !== 'image' && !query.trim())}
+          disabled={
+            loading ||
+            (mode !== 'image' && !query.trim()) ||
+            (mode === 'hybrid' && !resolvedImage())
+          }
           aria-label="Submit search"
           className="
             rounded-card border border-border bg-primary-500 px-5 py-3

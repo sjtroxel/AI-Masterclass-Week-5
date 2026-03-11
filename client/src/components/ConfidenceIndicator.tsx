@@ -4,9 +4,20 @@ import { HIGH_CONFIDENCE_THRESHOLD, HUMAN_HANDOFF_THRESHOLD } from '@poster-pilo
 
 export type ConfidenceColor = 'success' | 'warning' | 'danger';
 
-export function getConfidenceColor(score: number): ConfidenceColor {
-  if (score >= HIGH_CONFIDENCE_THRESHOLD) return 'success';  // >= 0.85
-  if (score >= HUMAN_HANDOFF_THRESHOLD) return 'warning';    // >= 0.72
+/**
+ * 'default' — archival/Archivist confidence. Thresholds from spec (0.85 / 0.72).
+ * 'search'  — CLIP query similarity. Recalibrated because text→image cosine
+ *             similarity naturally skews lower than stored overall_confidence.
+ *             ≥ 0.72 → green, ≥ 0.58 → yellow, < 0.58 → red.
+ */
+export function getConfidenceColor(score: number, variant: 'default' | 'search' = 'default'): ConfidenceColor {
+  if (variant === 'search') {
+    if (score >= 0.65) return 'success'; // top ~65%+ of result set = green
+    if (score >= 0.40) return 'warning'; // 40-65% = yellow
+    return 'danger';                     // bottom fringe = red
+  }
+  if (score >= HIGH_CONFIDENCE_THRESHOLD) return 'success'; // >= 0.85
+  if (score >= HUMAN_HANDOFF_THRESHOLD)   return 'warning'; // >= 0.72
   return 'danger';
 }
 
@@ -29,10 +40,11 @@ const DOT_CLASS: Record<ConfidenceColor, string> = {
 interface ConfidenceIndicatorProps {
   score: number;
   showLabel?: boolean;
+  variant?: 'default' | 'search';
 }
 
-export default function ConfidenceIndicator({ score, showLabel = false }: ConfidenceIndicatorProps) {
-  const color = getConfidenceColor(score);
+export default function ConfidenceIndicator({ score, showLabel = false, variant = 'default' }: ConfidenceIndicatorProps) {
+  const color = getConfidenceColor(score, variant);
   const pct = Math.round(score * 100);
 
   return (

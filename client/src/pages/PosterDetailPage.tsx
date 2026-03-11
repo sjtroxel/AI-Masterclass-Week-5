@@ -5,6 +5,7 @@ import * as api from '../lib/api.js';
 import { debug } from '../lib/debug.js';
 import { useArchivistContext } from '../lib/archivistContext.js';
 import ConfidenceIndicator from '../components/ConfidenceIndicator.js';
+import ScoreLabel from '../components/ScoreLabel.js';
 import VisualSiblings from '../components/VisualSiblings.js';
 import ErrorState from '../components/ErrorState.js';
 
@@ -83,7 +84,7 @@ export default function PosterDetailPage() {
 
   if (fetchState === 'loading') {
     return (
-      <main className="min-h-screen bg-surface px-4 py-8 md:px-8">
+      <main className="min-h-screen bg-surface pl-4 pr-10 py-8 md:pl-8 md:pr-12">
         <div className="mx-auto max-w-6xl">
           <div className="mb-6 h-4 w-48 animate-pulse rounded bg-surface-2" />
           <div className="flex flex-col gap-8 md:flex-row">
@@ -108,7 +109,7 @@ export default function PosterDetailPage() {
 
   if (fetchState === 'error' || !poster) {
     return (
-      <main className="min-h-screen bg-surface px-4 py-8 md:px-8">
+      <main className="min-h-screen bg-surface pl-4 pr-10 py-8 md:pl-8 md:pr-12">
         <div className="mx-auto max-w-6xl">
           <ErrorState
             message={errorMsg || 'Poster not found.'}
@@ -128,7 +129,7 @@ export default function PosterDetailPage() {
     .join(' — ');
 
   return (
-    <main className="min-h-screen bg-surface px-4 py-8 md:px-8">
+    <main className="min-h-screen bg-surface pl-4 pr-10 py-8 md:pl-8 md:pr-12">
       <div className="mx-auto max-w-6xl flex flex-col gap-8">
 
         {/* Breadcrumb / Back navigation */}
@@ -272,7 +273,10 @@ export default function PosterDetailPage() {
 
             {/* Confidence indicator */}
             <div className="flex flex-col gap-1">
-              <span className="font-sans text-xs text-text-muted">Archival confidence</span>
+              <ScoreLabel
+                label="Archival confidence"
+                description="How complete and reliable the NARA catalog record is for this poster. Based on metadata richness and image quality at the time of indexing. Not related to search relevance."
+              />
               <ConfidenceIndicator score={poster.overall_confidence} showLabel />
             </div>
 

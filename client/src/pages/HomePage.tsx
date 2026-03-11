@@ -16,7 +16,7 @@ export default function HomePage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-surface px-4">
+    <main className="flex min-h-screen flex-col items-center justify-center bg-surface pl-4 pr-10">
       <div className="flex w-full max-w-2xl flex-col items-center gap-8">
         {/* Wordmark */}
         <div className="flex flex-col items-center gap-4 text-center">
