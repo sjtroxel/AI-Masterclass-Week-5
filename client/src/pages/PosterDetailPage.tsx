@@ -71,7 +71,7 @@ export default function PosterDetailPage() {
   // Sync this poster into the Archivist's context so the sidebar can reference it
   useEffect(() => {
     if (!poster) return;
-    setPosterContext([poster.id], { [poster.nara_id]: poster.id }, {});
+    setPosterContext([poster.id], { [poster.nara_id]: poster.id }, { [poster.id]: poster.overall_confidence });
   }, [poster, setPosterContext]);
 
   // "How are these related?" — opens sidebar and sends the pre-seeded question
